@@ -1,21 +1,27 @@
-# Module C Documentation
+# Module C – Technical Documentation
 
-This directory contains the practical documentation and verification evidence for the Weilburg enterprise network configuration.
+The technical documentation for the Weilburg enterprise network is organized into three stages of the engineering workflow: design, implementation, and testing/validation.
 
-The documentation covers:
+## Documentation
 
-- Network topology and device roles.
-- VLAN and IPv4 addressing plan.
-- EtherChannel and Rapid PVST+ implementation.
-- HSRP gateway redundancy and load-sharing configuration.
-- OSPF routing and default-route propagation.
-- Centralized DHCP and DNS services.
-- NAT/PAT configuration and connectivity tests.
-- SSH device management and access-control configuration.
-- Port Security implementation.
-- Intranet HTTP/HTTPS extended ACL policy.
-- DNS resolution, external reachability and Intranet browser tests.
+| Section | Contents |
+|---|---|
+| [01 – Network Design](01-Network-Design/README.md) | Logical architecture, device roles, VLANs, services and IPv4 addressing |
+| [02 – Implementation](02-Implementation/README.md) | Switching, VLANs, routing, redundancy, network services and security |
+| [03 – Testing and Validation](03-Testing-and-Validation/README.md) | Test plan, observed results, compliance matrix and evidence guide |
 
-The repository-level `docs/` directory contains the network overview, test results and final validation matrix. Sanitized screenshots and additional evidence can be stored in `../../evidence/module-c-configuration/`.
+## Related project assets
 
-Only observed and repeatable test results should be reported as verified. Configuration that has not yet passed a functional test must remain marked as pending.
+- [Sanitized device configurations](../configurations/routers/)
+- [Packet Tracer topology](../topology/)
+- [Evidence repository](evidence/README.md)
+
+## Documentation conventions
+
+- **Configured** means the setting appears in a captured device configuration.
+- **Verified** means an operational command or functional test was observed.
+- **Pending** means that evidence has not yet been collected; it does not necessarily mean the feature is broken.
+- Differences between captured configuration and later operational output are documented with context.
+- Passwords, password hashes, private keys and other credentials must not be published.
+
+This is independent educational portfolio work and is not affiliated with or endorsed by WorldSkills Germany or the competition organizers.

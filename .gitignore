@@ -1,0 +1,36 @@
+# Operating system / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Packet Tracer project files: keep local unless redistribution is confirmed
+*.pka
+*.pkt
+
+# Temporary and backup files
+*.tmp
+*.temp
+*.bak
+*.old
+*.autosave
+*~
+
+# Logs and scratch files
+*.log
+*.swp
+
+# Secrets and private key material
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+
+# Local exports / archives
+*.zip
+*.7z

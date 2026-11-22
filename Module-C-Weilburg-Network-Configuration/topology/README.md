@@ -1,4 +1,5 @@
-# Weilburg Network Topology
+# Weilburg Network Topology<img width="952" height="812" alt="image" src="https://github.com/user-attachments/assets/993bb704-57f1-41ea-bdef-fbd73b73deb9" />
+
 
 This directory contains the Cisco Packet Tracer project for the WorldSkills Germany 2025 Module C – Weilburg enterprise network configuration.
 

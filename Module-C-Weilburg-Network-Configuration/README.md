@@ -1,220 +1,275 @@
-# Module C – Weilburg Enterprise Network Configuration
+# Module C – Weilburg Enterprise Network
 
-## 1. Project Overview
+A Cisco Packet Tracer implementation of a redundant enterprise branch network, based on the **WorldSkills Germany 2025 – IT Network Systems Administration, Module C** task.
 
-This project documents the implementation of the Weilburg enterprise network from the WorldSkills Germany 2025 IT Network Systems Administration practical task.
+> Independent educational portfolio work. This repository is not affiliated with or endorsed by WorldSkills Germany or the competition organizers.
 
-The topology uses two Layer 3 access switches, one Layer 3 core switch and two WAN routers. The implementation focuses on resilient switching, dynamic routing, centralized network services, WAN connectivity and network security.
+**Platform:** Cisco Packet Tracer  
+**Network domain:** Routing & Switching · Enterprise Networking · Network Security  
+**Devices:** 2 Layer 3 access switches · 1 Layer 3 core switch · 2 WAN routers
 
-**Platform:** Cisco Packet Tracer
+---
 
-## 2. Project Objectives
+## Network Topology
 
-- Configure VLAN segmentation for HR, Sales, Engineering, WLAN and Server networks.
-- Configure Layer 3 switching and inter-VLAN gateway services.
-- Implement redundant access-to-core uplinks using EtherChannel.
-- Configure Rapid PVST+ and define primary and secondary STP roots.
-- Implement HSRP gateway redundancy and load sharing across the user VLANs.
-- Configure OSPF across the Weilburg network and both WAN routers.
-- Advertise default routes from the WAN routers into the internal OSPF domain.
-- Provide centralized DHCP and DNS services, including DHCP relay.
-- Configure NAT/PAT for access to the simulated external network.
-- Secure device management using local authentication and SSH version 2.
-- Restrict remote management access using a standard ACL.
-- Apply Port Security on access ports.
-- Filter access to the Intranet server using an extended ACL.
-- Verify the network through routing, DNS, ping and web browser tests.
+The diagram shows the Weilburg branch, its internal OSPF Area 0, dual WAN connectivity to the Corporate and ISP routers, the Intranet server, simulated Internet endpoint, user VLANs and centralized DHCP/DNS services.
 
-## 3. Network Architecture
+![Weilburg enterprise network topology](topology/Weilburg-Network-Topology.png)
 
-The network consists of five Cisco devices:
+[Open the topology image](topology/Weilburg-Network-Topology.png) · [Open the Packet Tracer project](topology/Module%20C%20%E2%80%93%20Networking.pka)
 
-### Switching Layer
+## Project Overview
 
-- **Weil_A1 – Access Switch 1:** Layer 3 access switch. Configured as the preferred STP root for VLANs 2, 4, 6 and 8. HSRP active gateway for VLANs 2 and 4.
-- **Weil_A2 – Access Switch 2:** Layer 3 access switch. Configured as the secondary STP root for VLANs 2, 4, 6 and 8. HSRP active gateway for VLANs 6 and 8.
-- **Weil_C1 – Core Switch:** Central Layer 3 switch connecting both access switches to the WAN routers. Provides the Server VLAN interface and participates in OSPF.
+The Weilburg site is designed around a redundant Layer 3 campus network. Two multilayer access switches provide the user VLAN gateways and connect to a central Layer 3 core switch. The core connects to two WAN routers, which provide separate paths towards the Corporate WAN and the ISP.
 
-### WAN Layer
+The implementation covers:
 
-- **Weil_W1 – WAN Router 1:** Connects the core network to the ISP and corporate WAN. Performs OSPF, default-route advertisement, NAT/PAT and Intranet ACL filtering.
-- **Weil_W2 – WAN Router 2:** Provides a second WAN path and performs the corresponding OSPF, default-route advertisement, NAT/PAT and Intranet ACL functions.
+- VLAN segmentation for HR, Sales, Engineering, WLAN and Servers.
+- Inter-VLAN routing using Layer 3 switch virtual interfaces (SVIs).
+- Layer 2 and Layer 3 EtherChannel using LACP.
+- Rapid Spanning Tree design and root-bridge placement.
+- HSRP default-gateway redundancy and load sharing.
+- OSPF dynamic routing across the branch and WAN edge.
+- Centralized DHCP and DNS services with DHCP relay.
+- NAT/PAT for access to the simulated external network.
+- SSH version 2, local authentication and management access control.
+- Port Security on access-switch interfaces.
+- Extended ACL policy for HTTPS/HTTP access to the Intranet server.
 
-## 4. VLAN and IPv4 Addressing Plan
+## Network Architecture
 
-| VLAN | Department / Purpose | Network | HSRP Virtual IP |
+### Device roles
+
+| Device | Layer / role | Main function |
+|---|---|---|
+| **Weil_A1** | Layer 3 access switch | User VLAN gateways; intended HSRP active for VLANs 2 and 4; primary STP root |
+| **Weil_A2** | Layer 3 access switch | User VLAN gateways; intended HSRP active for VLANs 6 and 8; secondary STP root |
+| **Weil_C1** | Layer 3 core switch | Aggregates both access switches and both WAN routers; provides the Server VLAN SVI |
+| **Weil_W1** | WAN router 1 | Corporate and ISP connectivity, OSPF, default routing, NAT/PAT and Intranet ACL |
+| **Weil_W2** | WAN router 2 | Secondary Corporate and ISP path, OSPF, default routing, NAT/PAT and Intranet ACL |
+
+### Logical design
+
+**Access layer:** Weil_A1 and Weil_A2 provide access connectivity for wired users and wireless access points. User VLANs are carried between the access switches over an L2 EtherChannel. Each access switch has an L3 EtherChannel uplink to Weil_C1.
+
+**Core layer:** Weil_C1 provides the central routed point between the access layer and the WAN routers. The DHCP and DNS servers are connected to the Server VLAN (VLAN 130).
+
+**WAN edge:** Weil_W1 and Weil_W2 connect the branch to both Corporate and ISP networks. The corporate-facing links are assigned to OSPF Area 2; the internal Weilburg routing domain uses Area 0.
+
+## VLAN and IPv4 Addressing
+
+| VLAN | Name / purpose | Network | Default gateway |
 |---:|---|---|---|
-| 2 | HR | `10.10.2.0/27` | `10.10.2.30` |
-| 4 | Sales | `10.10.4.0/28` | `10.10.4.14` |
-| 6 | Engineering | `10.10.6.0/26` | `10.10.6.62` |
-| 8 | WLAN | `10.10.8.0/29` | `10.10.8.6` |
-| 130 | Servers | `10.10.130.0/29` | Core SVI: `10.10.130.6` |
+| 2 | HR | `10.10.2.0/27` | HSRP VIP `10.10.2.30` |
+| 4 | SALES | `10.10.4.0/28` | HSRP VIP `10.10.4.14` |
+| 6 | ENGINEERING | `10.10.6.0/26` | HSRP VIP `10.10.6.62` |
+| 8 | WLAN | `10.10.8.0/29` | HSRP VIP `10.10.8.6` |
+| 130 | SERVER | `10.10.130.0/29` | Core SVI `10.10.130.6` |
 
-### Centralized Services
+### Access-switch port allocation
 
-| Service | IPv4 Address |
+| Interfaces on A1 and A2 | VLAN | Purpose |
+|---|---:|---|
+| Gi1/0/3–8 | 2 | HR |
+| Gi1/0/9–16 | 4 | Sales |
+| Gi1/0/17–20 | 6 | Engineering |
+| Gi1/0/21–22 | 8 | WLAN / access points |
+
+On Weil_C1, Gi1/0/3–20 are intended for Server VLAN 130 endpoints. Check the live VLAN and interface state in Packet Tracer before final sign-off.
+
+### Centralized services and application endpoints
+
+| Service / endpoint | IPv4 address |
 |---|---|
-| DHCP Server | `10.10.130.2` |
-| DNS Server | `10.10.130.3` |
-| Intranet Server | `192.168.66.200` |
-| Simulated External Web Server | `200.1.1.100` |
+| DHCP server | `10.10.130.2` |
+| DNS server | `10.10.130.3` |
+| Intranet server | `192.168.66.200` |
+| Simulated external web endpoint | `200.1.1.100` (`www.google.de` in the observed DNS test) |
 
-### Routed Transit Networks
+## Routed Links and WAN Addressing
 
-| Connection | Network |
+### Internal routed links
+
+| Connection | Network | Weilburg endpoint addresses |
+|---|---|---|
+| Weil_A1 – Weil_C1 | `10.11.1.0/30` | A1: `10.11.1.2` · C1: `10.11.1.1` |
+| Weil_A2 – Weil_C1 | `10.11.2.0/30` | A2: `10.11.2.2` · C1: `10.11.2.1` |
+| Weil_C1 – Weil_W1 | `10.11.3.0/30` | C1: `10.11.3.1` · W1: `10.11.3.2` |
+| Weil_C1 – Weil_W2 | `10.11.4.0/30` | C1: `10.11.4.1` · W2: `10.11.4.2` |
+
+### Corporate and ISP links
+
+| Connection | Network | Weilburg endpoint | Remote endpoint |
+|---|---|---|---|
+| W1 – Corporate | `172.20.20.0/30` | W1: `172.20.20.1` | Corporate: `172.20.20.2` |
+| W2 – Corporate | `172.20.20.4/30` | W2: `172.20.20.5` | Corporate: `172.20.20.6` |
+| W1 – ISP | `195.198.11.0/30` | W1: `195.198.11.1` | ISP: `195.198.11.2` |
+| W2 – ISP | `195.198.11.4/30` | W2: `195.198.11.5` | ISP: `195.198.11.6` |
+
+### Loopback management addresses
+
+| Device | Loopback1 |
 |---|---|
-| Weil_A1 – Weil_C1 | `10.11.1.0/30` |
-| Weil_A2 – Weil_C1 | `10.11.2.0/30` |
-| Weil_C1 – Weil_W1 | `10.11.3.0/30` |
-| Weil_C1 – Weil_W2 | `10.11.4.0/30` |
-| Weil_W1 – ISP | `195.198.11.0/30` |
-| Weil_W2 – ISP | `195.198.11.4/30` |
-| Weil_W1 – Corporate WAN | `172.20.20.0/30` |
-| Weil_W2 – Corporate WAN | `172.20.20.4/30` |
+| Weil_C1 | `10.10.111.1/32` |
+| Weil_A1 | `10.10.111.2/32` |
+| Weil_A2 | `10.10.111.3/32` |
+| Weil_W1 | `10.10.111.4/32` |
+| Weil_W2 | `10.10.111.5/32` |
 
-## 5. Implementation
+## Routing and Redundancy Design
 
-### 5.1 VLANs and Layer 3 Switching
+### OSPF
 
-Created the required VLANs and configured the access-switch SVIs using the assigned addressing plan. The HSRP virtual addresses provide the default gateway addresses for the user VLANs.
+OSPF Process 1 is used for dynamic routing. The intended router IDs and area assignments are:
 
-### 5.2 EtherChannel
+| Device | Router ID | Area assignment |
+|---|---|---|
+| Weil_A1 | `1.1.1.1` | Area 0 |
+| Weil_A2 | `2.2.2.2` | Area 0 |
+| Weil_C1 | `3.3.3.3` | Area 0 |
+| Weil_W1 | `4.4.4.4` | Area 0 internally; Corporate link in Area 2 |
+| Weil_W2 | `5.5.5.5` | Area 0 internally; Corporate link in Area 2 |
 
-Configured aggregated uplinks between the access switches and the core switch to provide logical bundled links and redundant physical paths.
+The WAN routers use next-hop static default routes towards the ISP and are configured to originate the default route into OSPF.
 
-### 5.3 Spanning Tree Protocol
+### HSRP
 
-Configured Rapid PVST+ on both access switches. Weil_A1 was selected as the primary root and Weil_A2 as the secondary root for VLANs 2, 4, 6 and 8. PortFast and BPDU Guard were configured on access ports in accordance with the task requirements.
+HSRP version 1 provides a virtual default gateway for each user VLAN. The intended active-gateway distribution is:
 
-### 5.4 HSRP
+| VLAN | Virtual IP | Intended active switch | Intended standby switch |
+|---:|---|---|---|
+| 2 | `10.10.2.30` | Weil_A1 | Weil_A2 |
+| 4 | `10.10.4.14` | Weil_A1 | Weil_A2 |
+| 6 | `10.10.6.62` | Weil_A2 | Weil_A1 |
+| 8 | `10.10.8.6` | Weil_A2 | Weil_A1 |
 
-Configured HSRP version 1 with group numbers corresponding to VLAN IDs. The intended active gateway distribution is:
+The task specifies priority 105 on the preferred active switch, priority 100 on the standby switch, preemption, and tracking of the Layer 3 port-channel uplink.
 
-- Weil_A1: VLAN 2 and VLAN 4.
-- Weil_A2: VLAN 6 and VLAN 8.
+### EtherChannel and Spanning Tree
 
-Preemption and uplink tracking were also configured. Final priority and tracking compliance should be checked against the official task requirements before treating the HSRP section as fully signed off.
+- The A1–A2 inter-switch link is an L2 EtherChannel using LACP, with native VLAN 10 and only VLANs 2, 4, 6 and 8 allowed.
+- A1 and A2 each have an L3 EtherChannel uplink to C1, using LACP.
+- The required switching standard is Rapid PVST+ (802.1w), with A1 as primary root and A2 as secondary root.
+- Access-port PortFast and BPDU Guard are required on the individual end-device interfaces.
 
-### 5.5 OSPF Dynamic Routing
+## Network Services and Security
 
-Configured OSPF Process 1 across the access, core and WAN devices. The internal Weilburg routing domain uses Area 0, while the corporate-facing WAN links use Area 2. The WAN routers originate their default routes into the OSPF domain.
+### DHCP and DNS
 
-The configured router IDs are:
+DHCP and DNS are centralized in VLAN 130. DHCP relay on the user VLAN gateway interfaces forwards client requests to `10.10.130.2`. DNS clients use `10.10.130.3`.
 
-| Device | OSPF Router ID |
-|---|---|
-| Weil_A1 | `1.1.1.1` |
-| Weil_A2 | `2.2.2.2` |
-| Weil_C1 | `3.3.3.3` |
-| Weil_W1 | `4.4.4.4` |
-| Weil_W2 | `5.5.5.5` |
+### NAT/PAT
 
-### 5.6 DHCP and DNS
+The named standard ACL `vlans` selects the internal subnets for translation. PAT overload uses the ISP-facing Serial0/1/0 interface address on each WAN router.
 
-The DHCP server is located in VLAN 130 at `10.10.130.2`. The DNS server is located at `10.10.130.3`. DHCP relay was configured on the user VLAN gateway interfaces to forward DHCP requests to the centralized server.
+The W2 VLAN 2 NAT wildcard was corrected from `0.0.0.3` to `0.0.0.31` after review. The updated device record reflects this correction; include a current `show access-lists vlans` output in the evidence set for final verification.
 
-### 5.7 NAT/PAT
+### Device management
 
-Configured a named standard ACL `vlans` to select internal source networks for translation. PAT overload uses each WAN router's ISP-facing Serial0/1/0 interface.
+The device configurations use local authentication, SSH version 2, SSH-only VTY transport, a management-source ACL, password encryption and an MOTD warning banner. Credential values and password hashes are intentionally excluded from the public configuration records.
 
-### 5.8 Device Management Security
+### Intranet access policy
 
-Configured local user authentication, enable secret, password encryption, the domain name `skill39.org`, SSH version 2, console local authentication and an MOTD banner. VTY lines 0–15 use local authentication and accept SSH only. Standard ACL 1 restricts remote management sources to the Server VLAN subnet `10.10.130.0/29`.
-
-Credential values are intentionally not reproduced in this public documentation.
-
-### 5.9 Port Security
-
-Port Security was configured on the access switches with a one-MAC limit for normal access interfaces and a 50-MAC limit for the designated WLAN access-point interface. The configured violation action is Protect. The AP interface assignment on both access switches remains subject to final verification against the physical topology and task specification.
-
-### 5.10 Intranet Access Control
-
-A named extended ACL `intranet` was configured on both WAN routers and applied inbound on GigabitEthernet0/0/0.
+The extended ACL `intranet` is configured on both WAN routers and applied inbound on the site-facing GigabitEthernet0/0/0 interface.
 
 | Traffic to `192.168.66.200` | Policy |
 |---|---|
-| TCP port 443 – HTTPS | Permit |
-| TCP port 80 – HTTP | Deny |
+| TCP/443 – HTTPS | Permit |
+| TCP/80 – HTTP | Deny |
 | Other IP traffic | Permit |
 
-## 6. Verification and Testing
+## Verification Results
 
-The following tests were performed and reported from a Packet Tracer client:
+The following tests have been reported from the Packet Tracer environment:
 
-### DNS Resolution
+| Test | Observed result |
+|---|---|
+| DNS lookup for `www.google.de` | DNS server `10.10.130.3` returned `200.1.1.100` |
+| Ping to `www.google.de` | 4/4 replies reported |
+| Ping to `200.1.1.100` | 4/4 replies reported |
+| HTTPS to `https://192.168.66.200` | Succeeded |
+| HTTP to `http://192.168.66.200` | Blocked |
 
-Command:
+These tests demonstrate the observed behavior for the tested client and simulated endpoints. They do not prove reachability to arbitrary public Internet destinations or complete compliance with every task requirement.
+
+### Items still requiring final evidence
+
+The project documentation keeps configuration review separate from operational verification. The following items need a final command output or repeatable test before full sign-off:
+
+- W1's Corporate OSPF neighbor was last reported in EXSTART, while W1–C1 was FULL. W2's latest shared neighbor output showed both C1 and Corporate neighbors FULL. Recheck both WAN routers and capture the final state.
+- The captured C1 configuration showed `spanning-tree mode pvst`; the task requires 802.1w / Rapid PVST+.
+- The supplied A1/A2 configuration records showed HSRP priority 115 on some groups; the task specifies 105 for the preferred active switch and 100 for standby.
+- The supplied W2 ISP interface configuration showed bandwidth 15,000 Kbit/s, while W1's ISP interface showed 10,000 Kbit/s. The task states W1's ISP connection must be faster than W2; verify and correct the W2 value against the task specification.
+- Complete DHCP lease, SSH allow/deny, Port Security, EtherChannel, HSRP failover/recovery and NAT translation tests.
+- Confirm the final W2 NAT ACL correction on the live device.
+
+## Device Configuration Records
+
+The following public configuration records are sanitized. Passwords and password hashes are redacted.
+
+| Device | Configuration record |
+|---|---|
+| Weil_A1 | [Weil_A1.txt](configurations/Weil_A1.txt) |
+| Weil_A2 | [Weil_A2.txt](configurations/Weil_A2.txt) |
+| Weil_C1 | [Weil_C1.txt](configurations/Weil_C1.txt) |
+| Weil_W1 | [Weil_W1.txt](configurations/routers/Weil_W1.txt) |
+| Weil_W2 | [Weil_W2.txt](configurations/routers/Weil_W2.txt) |
+
+[Configuration directory](configurations/README.md)
+
+## Technical Documentation
+
+The detailed documentation is organized by engineering workflow:
+
+| Section | Contents |
+|---|---|
+| [01 – Network Design](documentation/01-Network-Design/README.md) | Architecture and IP addressing plan |
+| [02 – Implementation](documentation/02-Implementation/README.md) | Switching, routing, redundancy, services and security |
+| [03 – Testing and Validation](documentation/03-Testing-and-Validation/README.md) | Test plan, observed results, compliance matrix and evidence guide |
+| [Evidence library](documentation/evidence/README.md) | Evidence categories and screenshot guidance |
+
+## Repository Contents
 
 ```text
-nslookup www.google.de
+Module-C-Weilburg-Network-Configuration/
+├── README.md
+├── configurations/
+│   ├── Weil_A1.txt
+│   ├── Weil_A2.txt
+│   ├── Weil_C1.txt
+│   └── routers/
+│       ├── Weil_W1.txt
+│       └── Weil_W2.txt
+├── documentation/
+│   ├── 01-Network-Design/
+│   ├── 02-Implementation/
+│   ├── 03-Testing-and-Validation/
+│   └── evidence/
+└── topology/
+    ├── Module C – Networking.pka
+    ├── Weilburg-Network-Topology.png
+    └── README.md
 ```
 
-Observed result: DNS server `10.10.130.3` resolved `www.google.de` to `200.1.1.100`.
-
-### External Server Reachability
-
-Commands:
-
-```text
-ping www.google.de
-ping 200.1.1.100
-```
-
-Observed result: both tests returned 4 replies from 4 packets sent (0% packet loss).
-
-### Intranet Web Access
-
-- HTTPS request to `https://192.168.66.200` succeeded.
-- HTTP request to `http://192.168.66.200` was blocked.
-
-Additional routing, redundancy, DHCP, SSH and Port Security checks are listed in the repository's validation matrix. See [Documentation](documentation/README.md).
-
-## 7. Configuration Files
-
-Device configuration exports are stored in the `configurations/` directory:
-
-- `Weil_A1.txt`
-- `Weil_A2.txt`
-- `Weil_C1.txt`
-- `Weil_W1.txt`
-- `Weil_W2.txt`
-
-## 8. Project Files
-
-- [Cisco Packet Tracer working topology](topology/Module%20C%20%E2%80%93%20Networking.pka).
-- Five device configuration exports in `configurations/` (to be added).
-- Network addressing and topology documentation.
-- Verification screenshots and test evidence.
-- Configuration and troubleshooting notes.
-
-## 9. Technologies and Tools
+## Tools and Technologies
 
 - Cisco Packet Tracer
 - Cisco IOS
-- VLANs
-- Layer 3 Switching
-- EtherChannel
-- Rapid PVST+
+- VLANs and Layer 3 switching
+- LACP EtherChannel
+- Rapid PVST+ / 802.1w
 - HSRP
 - OSPF
-- DHCP Relay
-- DNS
+- DHCP and DNS
 - NAT/PAT
-- SSH
-- Standard and Extended ACLs
+- SSH v2
+- Standard and extended ACLs
 - Port Security
-
-## 10. Project Status
-
-**Implementation:** Configured and tested in Cisco Packet Tracer.
-
-**Verified:** DNS name resolution, ICMP reachability to the simulated external web server, and Intranet HTTPS/HTTP ACL behavior.
-
-**Pending:** Final HSRP priority/tracking audit, AP-port compliance verification, complete DHCP and SSH access tests, and inclusion of sanitized device configuration exports and screenshots.
+- IPv4 routing and troubleshooting
 
 ---
 
 **Project:** WorldSkills Germany 2025 – IT Network Systems Administration  
-**Module:** C – Network Configuration  
-**Network:** Weilburg Enterprise Network  
+**Module:** C – Networking  
+**Scenario:** Weilburg Enterprise Network  
 **Platform:** Cisco Packet Tracer

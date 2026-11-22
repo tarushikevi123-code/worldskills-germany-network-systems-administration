@@ -1,0 +1,640 @@
+================================================================================
+WORLD SKILLS GERMANY 2025 – IT NETWORK SYSTEMS ADMINISTRATION
+MODULE C – WEILBURG ENTERPRISE NETWORK
+
+DEVICE:        Weil_A2
+DEVICE ROLE:   Layer 3 Access Switch 2
+PLATFORM:      Cisco Packet Tracer / Cisco IOS 16.3.2
+SOURCE:        Sanitized and organized from the user-provided
+               `show running-config` terminal transcript.
+
+DOCUMENT TYPE: Cleaned configuration record with engineering notes.
+IMPORTANT:     This file preserves the configuration observed in the supplied
+               transcript. It is not a verified, byte-for-byte device export,
+               and it is not intended to be pasted into a device without review.
+================================================================================
+
+CONTENTS
+--------
+01. Device role and design summary
+02. Sanitized running configuration (organized)
+03. VLAN, addressing and gateway summary
+04. HSRP behavior and Packet Tracer tracking adaptation
+05. STP, access ports and Port Security
+06. EtherChannel and routed core connectivity
+07. OSPF configuration and observed adjacency event
+08. Security and remote management
+09. Findings, compliance notes and recommended follow-up
+10. Verification command reference
+
+
+01. DEVICE ROLE AND DESIGN SUMMARY
+-----------------------------------
+Weil_A2 is the secondary Layer 3 access switch in the Weilburg site. It provides
+SVIs and default-gateway redundancy for the HR, Sales, Engineering and WLAN
+VLANs. It connects to Weil_C1 through a routed Layer 3 EtherChannel (Port-channel3)
+and connects to Weil_A1 through a Layer 2 trunk EtherChannel (Port-channel1).
+
+Expected design roles from the competition task:
+- Rapid PVST+ secondary root for VLANs 2, 4, 6 and 8.
+- HSRP standby for VLANs 2 and 4.
+- HSRP active for VLANs 6 and 8.
+- OSPF process 1, router ID 2.2.2.2, in Area 0 for Weilburg interfaces.
+- DHCP relay toward 10.10.130.2 on the client VLAN SVIs.
+- Access-port Port Security, including a 50-MAC limit on the WLAN/AP port.
+
+
+02. SANITIZED RUNNING CONFIGURATION (ORGANIZED)
+------------------------------------------------
+The configuration below is reconstructed from the supplied running-config
+transcript. Pager prompts and interleaved console log messages have been removed.
+Password hashes are deliberately redacted. No credentials should be committed
+to a public repository.
+
+! -----------------------------------------------------------------------------
+! GLOBAL CONFIGURATION
+! -----------------------------------------------------------------------------
+version 16.3.2
+no service timestamps log datetime msec
+service timestamps debug datetime msec
+service password-encryption
+!
+hostname Weil_A2
+!
+no profinet
+!
+! enable secret and local-user secret existed in the source configuration.
+! Their hashes are redacted from this public copy.
+! enable secret 5 <REDACTED>
+! username weiladmin secret 5 <REDACTED>
+!
+no ip cef
+ip routing
+no ipv6 cef
+!
+ip ssh version 2
+ip domain-name skill39.org
+!
+spanning-tree mode rapid-pvst
+spanning-tree vlan 2,4,6,8 priority 28672
+!
+
+! -----------------------------------------------------------------------------
+! LOOPBACK / MANAGEMENT ADDRESS
+! -----------------------------------------------------------------------------
+interface Loopback1
+ ip address 10.10.111.3 255.255.255.255
+!
+
+! -----------------------------------------------------------------------------
+! LAYER 2 ETHERCHANNEL – CONNECTION TO WEIL_A1
+! -----------------------------------------------------------------------------
+interface Port-channel1
+ switchport trunk native vlan 10
+ switchport trunk allowed vlan 2,4,6,8
+ switchport mode trunk
+!
+interface GigabitEthernet1/0/1
+ switchport trunk native vlan 10
+ switchport trunk allowed vlan 2,4,6,8
+ switchport mode trunk
+ channel-group 1 mode active
+!
+interface GigabitEthernet1/0/2
+ switchport trunk native vlan 10
+ switchport trunk allowed vlan 2,4,6,8
+ switchport mode trunk
+ channel-group 1 mode active
+!
+
+! -----------------------------------------------------------------------------
+! LAYER 3 ETHERCHANNEL – CONNECTION TO WEIL_C1
+! -----------------------------------------------------------------------------
+interface Port-channel3
+ no switchport
+ ip address 10.11.2.2 255.255.255.252
+!
+interface GigabitEthernet1/0/23
+ no switchport
+ no ip address
+ channel-group 3 mode active
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet1/0/24
+ no switchport
+ no ip address
+ channel-group 3 mode active
+ duplex auto
+ speed auto
+!
+
+! -----------------------------------------------------------------------------
+! ACCESS PORTS – VLAN 2 (HR)
+! -----------------------------------------------------------------------------
+interface GigabitEthernet1/0/3
+ switchport access vlan 2
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/4
+ switchport access vlan 2
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/5
+ switchport access vlan 2
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/6
+ switchport access vlan 2
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/7
+ switchport access vlan 2
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/8
+ switchport access vlan 2
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+
+! -----------------------------------------------------------------------------
+! ACCESS PORTS – VLAN 4 (SALES)
+! -----------------------------------------------------------------------------
+interface GigabitEthernet1/0/9
+ switchport access vlan 4
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/10
+ switchport access vlan 4
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/11
+ switchport access vlan 4
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/12
+ switchport access vlan 4
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/13
+ switchport access vlan 4
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/14
+ switchport access vlan 4
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/15
+ switchport access vlan 4
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/16
+ switchport access vlan 4
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+
+! -----------------------------------------------------------------------------
+! ACCESS PORTS – VLAN 6 (ENGINEERING)
+! -----------------------------------------------------------------------------
+interface GigabitEthernet1/0/17
+ switchport access vlan 6
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/18
+ switchport access vlan 6
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/19
+ switchport access vlan 6
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/20
+ switchport access vlan 6
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+
+! -----------------------------------------------------------------------------
+! ACCESS PORTS – VLAN 8 (WLAN)
+! -----------------------------------------------------------------------------
+interface GigabitEthernet1/0/21
+ switchport access vlan 8
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 50
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/22
+ switchport access vlan 8
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+
+! -----------------------------------------------------------------------------
+! UNUSED / UNCONFIGURED INTERFACES
+! -----------------------------------------------------------------------------
+interface GigabitEthernet1/1/1
+!
+interface GigabitEthernet1/1/2
+!
+interface GigabitEthernet1/1/3
+!
+interface GigabitEthernet1/1/4
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+
+! -----------------------------------------------------------------------------
+! SWITCH VIRTUAL INTERFACES – CLIENT VLAN GATEWAYS
+! -----------------------------------------------------------------------------
+interface Vlan2
+ mac-address 0002.1646.5b01
+ ip address 10.10.2.28 255.255.255.224
+ ip helper-address 10.10.130.2
+ standby 2 ip 10.10.2.30
+ standby 2 preempt
+ standby 2 track GigabitEthernet1/0/23
+ standby 2 track GigabitEthernet1/0/24
+!
+interface Vlan4
+ mac-address 0002.1646.5b02
+ ip address 10.10.4.12 255.255.255.240
+ ip helper-address 10.10.130.2
+ standby 4 ip 10.10.4.14
+ standby 4 preempt
+ standby 4 track GigabitEthernet1/0/23
+ standby 4 track GigabitEthernet1/0/24
+!
+interface Vlan6
+ mac-address 0002.1646.5b03
+ ip address 10.10.6.60 255.255.255.192
+ ip helper-address 10.10.130.2
+ standby 6 ip 10.10.6.62
+ standby 6 priority 115
+ standby 6 preempt
+ standby 6 track GigabitEthernet1/0/23
+ standby 6 track GigabitEthernet1/0/24
+!
+interface Vlan8
+ mac-address 0002.1646.5b04
+ ip address 10.10.8.4 255.255.255.248
+ ip helper-address 10.10.130.2
+ standby 8 ip 10.10.8.6
+ standby 8 priority 115
+ standby 8 preempt
+ standby 8 track GigabitEthernet1/0/23
+ standby 8 track GigabitEthernet1/0/24
+!
+
+! -----------------------------------------------------------------------------
+! OSPF – PROCESS 1, ROUTER ID 2.2.2.2
+! -----------------------------------------------------------------------------
+router ospf 1
+ router-id 2.2.2.2
+ log-adjacency-changes
+ network 10.11.2.2 0.0.0.0 area 0
+ network 10.10.111.3 0.0.0.0 area 0
+ network 10.10.2.28 0.0.0.0 area 0
+ network 10.10.4.12 0.0.0.0 area 0
+ network 10.10.6.60 0.0.0.0 area 0
+ network 10.10.8.4 0.0.0.0 area 0
+!
+
+! -----------------------------------------------------------------------------
+! IP / MANAGEMENT ACCESS CONTROL
+! -----------------------------------------------------------------------------
+ip classless
+ip flow-export version 9
+!
+access-list 1 permit 10.10.130.0 0.0.0.7
+!
+banner motd ^CUnauthorized Access is Strictly Prohibited^C
+!
+line con 0
+ login local
+!
+line aux 0
+!
+line vty 0 4
+ access-class 1 in
+ login local
+ transport input ssh
+!
+line vty 5 15
+ access-class 1 in
+ login local
+ transport input ssh
+!
+end
+
+
+03. VLAN, ADDRESSING AND GATEWAY SUMMARY
+-----------------------------------------
+VLAN  Name          Network          Weil_A2 SVI       HSRP virtual IP
+----  ------------  ---------------  ----------------  ----------------
+2     HR            10.10.2.0/27     10.10.2.28/27     10.10.2.30
+4     SALES         10.10.4.0/28     10.10.4.12/28     10.10.4.14
+6     ENGINEERING   10.10.6.0/26     10.10.6.60/26     10.10.6.62
+8     WLAN          10.10.8.0/29     10.10.8.4/29      10.10.8.6
+
+Server services / relay destination:
+- DHCP server: 10.10.130.2
+- DHCP relay configured on VLAN 2, 4, 6 and 8 SVIs: ip helper-address 10.10.130.2
+
+Management loopback:
+- Loopback1: 10.10.111.3/32
+
+Routed core transit:
+- Port-channel3: 10.11.2.2/30
+- Expected peer Weil_C1: 10.11.2.1/30 (from the competition addressing plan)
+
+
+04. HSRP BEHAVIOR AND PACKET TRACER TRACKING ADAPTATION
+-------------------------------------------------------
+HSRP group IDs match the VLAN IDs. The virtual IP addresses are the last usable
+addresses in the corresponding client VLAN subnets.
+
+Observed configuration on Weil_A2:
+- VLAN 2: group 2, VIP 10.10.2.30, no explicit priority command (IOS default).
+- VLAN 4: group 4, VIP 10.10.4.14, no explicit priority command (IOS default).
+- VLAN 6: group 6, VIP 10.10.6.62, priority 115.
+- VLAN 8: group 8, VIP 10.10.8.6, priority 115.
+- Preemption is enabled on all four groups.
+- Both physical routed EtherChannel member interfaces are tracked on all four groups:
+  GigabitEthernet1/0/23 and GigabitEthernet1/0/24.
+- No explicit decrement value is present in the captured commands. Confirm the
+  effective decrement using `show standby` / `show standby detail` on the device.
+
+Packet Tracer adaptation:
+The project implementation uses per-member tracking because the Packet Tracer
+version used did not accept the Port-channel interface as the HSRP tracking
+object. Tracking both physical members is intended to lower HSRP priority when
+both uplink members are lost, while allowing the surviving member of the LACP
+bundle to continue forwarding when only one member fails.
+
+For the intended HSRP distribution:
+- Weil_A2 should be Standby for VLANs 2 and 4.
+- Weil_A2 should be Active for VLANs 6 and 8.
+
+Priority note:
+The official task specifies preferred-active priority 105 and standby priority
+100. The supplied running-config shows 115 on Weil_A2 VLANs 6 and 8; the absence
+of an explicit priority on VLANs 2 and 4 means the platform default applies.
+This is a documented implementation difference, not silently corrected here.
+
+Tracking behavior note:
+If the simulator applies the default decrement of 10 per tracked object, the
+expected priority progression for an active VLAN 6/8 group is 115 with both
+members up, 105 with one member down, and 95 with both members down. Confirm the
+actual decrement and state transitions on the device before claiming failover
+verification.
+
+
+05. STP, ACCESS PORTS AND PORT SECURITY
+----------------------------------------
+Spanning Tree:
+- Mode: Rapid PVST+ (`spanning-tree mode rapid-pvst`).
+- Weil_A2 VLAN 2, 4, 6 and 8 bridge priority: 28672.
+- This is the configured secondary-root priority; Weil_A1 is intended to be root
+  primary for these VLANs.
+
+Access-port allocation captured in the running configuration:
+- Gi1/0/3–Gi1/0/8: VLAN 2 (HR).
+- Gi1/0/9–Gi1/0/16: VLAN 4 (Sales).
+- Gi1/0/17–Gi1/0/20: VLAN 6 (Engineering).
+- Gi1/0/21–Gi1/0/22: VLAN 8 (WLAN).
+- Access ports use fixed access mode, Port Security, PortFast and BPDU Guard.
+
+Port Security:
+- Normal access ports: Port Security enabled; default maximum is not explicitly
+  set in the transcript, so verify the operational maximum using `show port-security`.
+- Gi1/0/21: explicit maximum 50 secure MAC addresses; violation mode Protect.
+- Gi1/0/22: Port Security enabled; no explicit maximum command is shown.
+- All displayed access ports use violation Protect.
+- Gi1/0/21 is the likely WLAN/AP port according to the task port map (interface
+  1/0/21); confirm the actual simulated cabling.
+
+
+06. ETHERCHANNEL AND ROUTED CORE CONNECTIVITY
+----------------------------------------------
+Layer 2 EtherChannel – Port-channel1:
+- Member interfaces: GigabitEthernet1/0/1 and GigabitEthernet1/0/2.
+- Protocol mode captured on both members: LACP active.
+- Trunk native VLAN: 10.
+- Allowed VLANs: 2, 4, 6 and 8.
+
+Layer 3 EtherChannel – Port-channel3:
+- Member interfaces: GigabitEthernet1/0/23 and GigabitEthernet1/0/24.
+- Protocol mode captured on both members: LACP active.
+- Routed Port-channel3 address: 10.11.2.2/30.
+- Expected Weil_C1 peer address: 10.11.2.1/30.
+
+The logical port-channel configuration and member assignments are present in
+the supplied transcript. Confirm operational bundling with `show etherchannel
+summary` and verify the routed adjacency with `show ip ospf neighbor`.
+
+
+07. OSPF CONFIGURATION AND OBSERVED ADJACENCY EVENT
+---------------------------------------------------
+Configured OSPF process:
+- Process ID: 1
+- Router ID: 2.2.2.2
+- Area: 0
+- Advertised interface addresses in the captured configuration:
+  - Port-channel3 address 10.11.2.2
+  - Loopback1 address 10.10.111.3
+  - VLAN 2 SVI 10.10.2.28
+  - VLAN 4 SVI 10.10.4.12
+  - VLAN 6 SVI 10.10.6.60
+  - VLAN 8 SVI 10.10.8.4
+
+Captured OSPF configuration:
+router ospf 1
+ router-id 2.2.2.2
+ log-adjacency-changes
+ network 10.11.2.2 0.0.0.0 area 0
+ network 10.10.111.3 0.0.0.0 area 0
+ network 10.10.2.28 0.0.0.0 area 0
+ network 10.10.4.12 0.0.0.0 area 0
+ network 10.10.6.60 0.0.0.0 area 0
+ network 10.10.8.4 0.0.0.0 area 0
+!
+
+
+
+Suggested verification:
+- `show ip ospf neighbor`
+- `show ip ospf interface brief`
+- `show ip protocols`
+- `show ip route ospf`
+
+
+08. SECURITY AND REMOTE MANAGEMENT
+----------------------------------
+Observed global / line configuration:
+- SSH version 2 enabled.
+- Domain name: skill39.org.
+- Local username configured (secret hash redacted).
+- Enable secret configured (hash redacted).
+- Password encryption service enabled.
+- MOTD banner: "Unauthorized Access is Strictly Prohibited".
+- Console line uses local login.
+- VTY lines 0–4 and 5–15 use local login and accept SSH only.
+- Standard ACL 1 permits source network 10.10.130.0/29.
+- ACL 1 is applied inbound to both VTY line ranges.
+- Telnet is not permitted by the captured VTY transport configuration.
+
+09. FINDINGS, COMPLIANCE NOTES AND RECOMMENDED FOLLOW-UP
+--------------------------------------------------------
+Confirmed from the supplied transcript:
+1. Hostname is Weil_A2 and IOS version is 16.3.2.
+2. Loopback1 is 10.10.111.3/32, matching the management address specified for
+   Weil_A2 in the competition appendix.
+3. Port-channel1 is configured as an L2 trunk with native VLAN 10 and allowed
+   VLANs 2, 4, 6 and 8.
+4. Port-channel3 is a routed L3 EtherChannel with address 10.11.2.2/30.
+5. Both EtherChannel member pairs use `channel-group ... mode active` (LACP).
+6. Client VLAN SVIs use the specified addresses and DHCP relay destination.
+7. Weil_A2 has priority 115 on VLANs 6 and 8 and no explicit priority on VLANs 2
+   and 4; the latter therefore use the platform default.
+8. Both physical routed-uplink members are tracked for HSRP groups 2, 4, 6 and 8.
+9. Rapid PVST+ is enabled and VLANs 2, 4, 6 and 8 use bridge priority 28672.
+10. Gi1/0/21 has a maximum of 50 secure MAC addresses and Protect violation mode.
+11. SSH-only VTY configuration and ACL 1 are present.
+12. An OSPF neighbor on Vlan4 was reported DOWN because the dead timer expired.
+
+
+10. VERIFICATION COMMAND REFERENCE
+----------------------------------
+Device and interface inventory:
+show version
+show running-config
+show ip interface brief
+show interfaces status
+show interfaces description
+
+VLAN and trunk checks:
+show vlan brief
+show interfaces trunk
+show interfaces switchport
+
+EtherChannel checks:
+show etherchannel summary
+show etherchannel port-channel
+show lacp neighbor
+show interfaces port-channel1
+show interfaces port-channel3
+
+Spanning Tree checks:
+show spanning-tree summary
+show spanning-tree vlan 2
+show spanning-tree vlan 4
+show spanning-tree vlan 6
+show spanning-tree vlan 8
+
+HSRP checks:
+show standby brief
+show standby
+show standby vlan 2
+show standby vlan 4
+show standby vlan 6
+show standby vlan 8
+
+OSPF and routing checks:
+show ip ospf neighbor
+show ip ospf interface brief
+show ip protocols
+show ip route
+show ip route ospf
+
+Security checks:
+show ip ssh
+show access-lists 1
+show port-security
+show port-security interface GigabitEthernet1/0/21
+show running-config | section line vty
+
+Save the verified configuration:
+copy running-config startup-config
+
+================================================================================
+END OF WEIL_A2 CONFIGURATION RECORD
+================================================================================

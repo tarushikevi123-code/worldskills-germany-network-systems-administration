@@ -16,7 +16,8 @@ The diagram shows the Weilburg branch, its internal OSPF Area 0, dual WAN connec
 
 ![Weilburg enterprise network topology](topology/Weilburg-Network-Topology.png)
 
-[Open the topology image](topology/Weilburg-Network-Topology.png) · [Open the Packet Tracer project](topology/Module%20C%20%E2%80%93%20Networking.pka)
+[Open the topology image](topology/Weilburg-Network-Topology.png) · <img width="955" height="795" alt="image" src="https://github.com/user-attachments/assets/5415b89e-0ea2-4e71-97fb-5d0af8b1ff6a" />
+
 
 ## Project Overview
 

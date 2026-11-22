@@ -1,0 +1,701 @@
+================================================================================
+WORLD SKILLS GERMANY 2025 – IT NETWORK SYSTEMS ADMINISTRATION
+MODULE C – WEILBURG ENTERPRISE NETWORK
+DEVICE CONFIGURATION RECORD
+================================================================================
+
+DEVICE             : Weil_C1
+DEVICE ROLE        : Core Layer 3 Switch
+PLATFORM           : Cisco Packet Tracer
+IOS VERSION        : 16.3.2 (as shown in the captured running configuration)
+SOURCE             : User-provided `show running-config` terminal transcript
+DOCUMENT TYPE      : Sanitized and normalized configuration record
+SOURCE ACCURACY    : Based on the supplied running-config output; not a byte-for-byte export
+
+IMPORTANT
+---------
+This document preserves the configuration shown in the supplied transcript.
+It is intended for public project documentation and technical review. It is
+NOT a ready-to-paste replacement configuration.
+
+Sensitive type 5 password hashes have been redacted. The login prompt supplied
+at the beginning of the terminal transcript did not contain a password value,
+and no password is reproduced here. Do not publish the original credentials or
+hashes in a public repository.
+
+No configuration commands have been added to make the device appear compliant.
+Where a requirement is not visible in the captured running configuration, it is
+identified as missing from the evidence and listed for verification.
+
+================================================================================
+CONTENTS
+================================================================================
+
+01. Device role and design summary
+02. Sanitized running configuration
+03. Management and loopback addressing
+04. Routed Layer 3 EtherChannels
+05. Routed WAN connections
+06. Server VLAN and access ports
+07. Spanning Tree configuration and compliance review
+08. OSPF configuration
+09. Device management and security
+10. Findings and items requiring verification
+11. Verification command reference
+
+================================================================================
+01. DEVICE ROLE AND DESIGN SUMMARY
+================================================================================
+
+Weil_C1 is the central Layer 3 core switch in the Weilburg site. It connects
+both Layer 3 access switches to the two WAN routers and provides the Layer 3
+interface for the centralized server VLAN.
+
+The captured configuration shows these roles and connections:
+
+- Routed LACP EtherChannel Port-channel2 towards Weil_A1.
+- Routed LACP EtherChannel Port-channel3 towards Weil_A2.
+- Routed interface GigabitEthernet1/0/1 towards Weil_W1.
+- Routed interface GigabitEthernet1/0/2 towards Weil_W2.
+- Server VLAN 130 SVI with address 10.10.130.6/29.
+- Server-facing access-port assignments on GigabitEthernet1/0/3 through
+  GigabitEthernet1/0/20, with access VLAN 130 configured.
+- OSPF process 1, router ID 3.3.3.3, with the Weilburg interfaces advertised
+  in Area 0.
+- SSH version 2 and local authentication for console and VTY access.
+- Standard ACL 1 applied inbound to the VTY lines to restrict remote
+  management to the server subnet.
+
+Expected neighboring devices and transit addressing from the official task:
+
+  Weil_A1  <-> Weil_C1 Port-channel2 : 10.11.1.2/30 <-> 10.11.1.1/30
+  Weil_A2  <-> Weil_C1 Port-channel3 : 10.11.2.2/30 <-> 10.11.2.1/30
+  Weil_C1  <-> Weil_W1              : 10.11.3.1/30 <-> 10.11.3.2/30
+  Weil_C1  <-> Weil_W2              : 10.11.4.1/30 <-> 10.11.4.2/30
+
+Server network:
+
+  VLAN 130 network : 10.10.130.0/29
+  Weil_C1 SVI      : 10.10.130.6/29
+  DHCP server      : 10.10.130.2
+  DNS server       : 10.10.130.3
+
+The DHCP and DNS addresses are specified by the competition task. They are
+not configured as local services on Weil_C1.
+
+================================================================================
+02. SANITIZED RUNNING CONFIGURATION (ORGANIZED)
+================================================================================
+
+The following configuration is transcribed from the supplied `show
+running-config` output. Terminal prompts and login interaction have been
+omitted. Password hashes are deliberately redacted.
+
+! -----------------------------------------------------------------------------
+! GLOBAL CONFIGURATION
+! -----------------------------------------------------------------------------
+version 16.3.2
+no service timestamps log datetime msec
+service timestamps debug datetime msec
+service password-encryption
+!
+hostname Weil_C1
+!
+no profinet
+!
+! The source configuration contained a type 5 enable-secret hash.
+! The hash is redacted and must not be published.
+enable secret <REDACTED – original type 5 hash not included>
+!
+no ip cef
+ip routing
+no ipv6 cef
+!
+! The source configuration contained a type 5 local-user hash.
+! The hash is redacted and must not be published.
+username weiladmin secret <REDACTED – original type 5 hash not included>
+!
+ip ssh version 2
+ip domain-name skill39.org
+!
+! NOTE: The captured configuration shows PVST, not Rapid PVST+.
+spanning-tree mode pvst
+!
+
+! -----------------------------------------------------------------------------
+! LOOPBACK – MANAGEMENT / OSPF ROUTER-ID REACHABILITY
+! -----------------------------------------------------------------------------
+interface Loopback1
+ ip address 10.10.111.1 255.255.255.255
+!
+
+! -----------------------------------------------------------------------------
+! ROUTED L3 ETHERCHANNEL – CONNECTION TO WEIL_A1
+! -----------------------------------------------------------------------------
+interface Port-channel2
+ no switchport
+ ip address 10.11.1.1 255.255.255.252
+!
+interface GigabitEthernet1/0/21
+ no switchport
+ no ip address
+ channel-group 2 mode active
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet1/0/22
+ no switchport
+ no ip address
+ channel-group 2 mode active
+ duplex auto
+ speed auto
+!
+
+! -----------------------------------------------------------------------------
+! ROUTED L3 ETHERCHANNEL – CONNECTION TO WEIL_A2
+! -----------------------------------------------------------------------------
+interface Port-channel3
+ no switchport
+ ip address 10.11.2.1 255.255.255.252
+!
+interface GigabitEthernet1/0/23
+ no switchport
+ no ip address
+ channel-group 3 mode active
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet1/0/24
+ no switchport
+ no ip address
+ channel-group 3 mode active
+ duplex auto
+ speed auto
+!
+
+! -----------------------------------------------------------------------------
+! ROUTED WAN CONNECTION – WEIL_W1
+! -----------------------------------------------------------------------------
+interface GigabitEthernet1/0/1
+ no switchport
+ ip address 10.11.3.1 255.255.255.252
+ duplex auto
+ speed auto
+!
+
+! -----------------------------------------------------------------------------
+! ROUTED WAN CONNECTION – WEIL_W2
+! -----------------------------------------------------------------------------
+interface GigabitEthernet1/0/2
+ no switchport
+ ip address 10.11.4.1 255.255.255.252
+ duplex auto
+ speed auto
+!
+
+! -----------------------------------------------------------------------------
+! SERVER ACCESS PORTS – VLAN 130
+! -----------------------------------------------------------------------------
+!
+interface GigabitEthernet1/0/3
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/4
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/5
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/6
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/7
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/8
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/9
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/10
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/11
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/12
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/13
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/14
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/15
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/16
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/17
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/18
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/19
+ switchport access vlan 130
+!
+interface GigabitEthernet1/0/20
+ switchport access vlan 130
+!
+
+! -----------------------------------------------------------------------------
+! UNUSED / UNCONFIGURED INTERFACES SHOWN IN THE CAPTURE
+! -----------------------------------------------------------------------------
+interface GigabitEthernet1/1/1
+!
+interface GigabitEthernet1/1/2
+!
+interface GigabitEthernet1/1/3
+!
+interface GigabitEthernet1/1/4
+!
+
+! -----------------------------------------------------------------------------
+! VLAN INTERFACES
+! -----------------------------------------------------------------------------
+interface Vlan1
+ no ip address
+ shutdown
+!
+interface Vlan130
+ mac-address 00e0.f92a.3801
+ ip address 10.10.130.6 255.255.255.248
+!
+
+! -----------------------------------------------------------------------------
+! OSPF PROCESS 1 – WEILBURG AREA 0
+! -----------------------------------------------------------------------------
+router ospf 1
+ router-id 3.3.3.3
+ log-adjacency-changes
+ network 10.11.1.1 0.0.0.0 area 0
+ network 10.11.2.1 0.0.0.0 area 0
+ network 10.10.111.1 0.0.0.0 area 0
+ network 10.11.3.1 0.0.0.0 area 0
+ network 10.11.4.1 0.0.0.0 area 0
+ network 10.10.130.6 0.0.0.0 area 0
+!
+
+! -----------------------------------------------------------------------------
+! IP / FLOW SETTINGS
+! -----------------------------------------------------------------------------
+ip classless
+ip flow-export version 9
+!
+
+! -----------------------------------------------------------------------------
+! REMOTE MANAGEMENT ACL
+! -----------------------------------------------------------------------------
+access-list 1 permit 10.10.130.0 0.0.0.7
+!
+
+! -----------------------------------------------------------------------------
+! MOTD BANNER
+! -----------------------------------------------------------------------------
+banner motd ^CUnauthorized Access is Strictly Prohibited^C
+!
+
+! -----------------------------------------------------------------------------
+! CONSOLE AND VTY ACCESS
+! -----------------------------------------------------------------------------
+line con 0
+ login local
+!
+line aux 0
+!
+line vty 0 4
+ access-class 1 in
+ login local
+ transport input ssh
+!
+line vty 5 15
+ access-class 1 in
+ login local
+ transport input ssh
+!
+end
+
+================================================================================
+03. MANAGEMENT AND LOOPBACK ADDRESSING
+================================================================================
+
+Loopback1
+---------
+
+  Interface : Loopback1
+  Address   : 10.10.111.1/32
+  Purpose   : Stable management / OSPF router-ID reachability address
+
+Verify the interface and OSPF router ID with:
+
+  show ip interface brief
+  show ip ospf
+  show ip protocols
+
+================================================================================
+04. ROUTED LAYER 3 ETHERCHANNELS
+================================================================================
+
+A. Port-channel2 – Weil_A1 connection
+------------------------------------
+
+  Logical interface : Port-channel2
+  Type              : Layer 3 / routed EtherChannel
+  Address           : 10.11.1.1/30
+  Expected peer     : Weil_A1 Port-channel2, 10.11.1.2/30
+  Physical members  : GigabitEthernet1/0/21 and GigabitEthernet1/0/22
+  Negotiation       : LACP, channel-group 2 mode active
+
+B. Port-channel3 – Weil_A2 connection
+------------------------------------
+
+  Logical interface : Port-channel3
+  Type              : Layer 3 / routed EtherChannel
+  Address           : 10.11.2.1/30
+  Expected peer     : Weil_A2 Port-channel3, 10.11.2.2/30
+  Physical members  : GigabitEthernet1/0/23 and GigabitEthernet1/0/24
+  Negotiation       : LACP, channel-group 3 mode active
+
+The `no switchport` command on each Port-channel makes it a routed Layer 3
+interface. The physical member interfaces are also configured with `no
+switchport` and placed in their respective LACP channel groups. IP addressing
+is applied to the logical Port-channel interfaces, not to the physical members.
+
+These configurations align with the addressing and LACP requirements in the
+competition task. Operational state is not proven by the running-config alone.
+Verify both ends with:
+
+  show etherchannel summary
+  show interfaces port-channel2
+  show interfaces port-channel3
+  show lacp neighbor
+  show ip interface brief
+  ping 10.11.1.2
+  ping 10.11.2.2
+
+Expected EtherChannel summary state is a Layer 3 port-channel in use with all
+intended members bundled (P). Confirm the exact remote physical interfaces on
+Weil_A1 and Weil_A2.
+
+================================================================================
+05. ROUTED WAN CONNECTIONS
+================================================================================
+
+GigabitEthernet1/0/1 – Weil_W1
+-----------------------------
+
+  Local interface : GigabitEthernet1/0/1
+  Address         : 10.11.3.1/30
+  Expected peer   : Weil_W1 GigabitEthernet0/0/0, 10.11.3.2/30
+  Mode            : Routed Layer 3 interface (`no switchport`)
+
+GigabitEthernet1/0/2 – Weil_W2
+-----------------------------
+
+  Local interface : GigabitEthernet1/0/2
+  Address         : 10.11.4.1/30
+  Expected peer   : Weil_W2 GigabitEthernet0/0/0, 10.11.4.2/30
+  Mode            : Routed Layer 3 interface (`no switchport`)
+
+The connected WAN links are included in OSPF Area 0 using exact interface
+addresses with a wildcard mask of 0.0.0.0.
+
+No static default route appears in the captured Weil_C1 configuration. Under
+the intended design, default-route origination is handled by the WAN routers.
+Verify that Weil_C1 learns the required default route through OSPF with:
+
+  show ip route 0.0.0.0
+  show ip route
+  show ip ospf database external
+
+================================================================================
+06. SERVER VLAN AND ACCESS PORTS
+================================================================================
+
+Server VLAN addressing
+----------------------
+
+  VLAN ID       : 130
+  Network       : 10.10.130.0/29
+  Weil_C1 SVI   : 10.10.130.6/29
+  DHCP server   : 10.10.130.2
+  DNS server    : 10.10.130.3
+
+The server addresses are defined in the official task. Weil_C1 provides the
+Layer 3 SVI for the server subnet. A DHCP relay command is not present under
+Vlan130; the DHCP server is directly connected to this same VLAN, so a relay
+is not required for DHCP clients within that subnet.
+
+Server-facing ports
+-------------------
+ Confirm that VLAN 130 exists and is active with:
+
+  show vlan brief
+  show interfaces status
+  show interfaces switchport
+  show ip interface brief
+
+The SVI should be operational (up/up) when VLAN 130 exists and at least one
+associated Layer 2 port is active/forwarding.
+
+================================================================================
+07. SPANNING TREE CONFIGURATION AND COMPLIANCE REVIEW
+================================================================================
+
+Captured command:
+
+  spanning-tree mode pvst
+
+  show spanning-tree summary
+  show spanning-tree vlan 130
+  show spanning-tree root
+
+Access-port STP settings
+------------------------
+
+The server-facing ports Gi1/0/3 through Gi1/0/20 do not show the following
+required interface-level settings in the captured running configuration:
+
+  switchport mode access
+  spanning-tree portfast
+  spanning-tree bpduguard enable
+
+The task says end-device ports must be fixed access ports and that access
+ports must use PortFast and BPDU protection configured directly on the
+interfaces. These commands should be checked against the final Packet Tracer
+configuration before the project is described as fully compliant.
+
+Do not apply PortFast or BPDU Guard to routed uplinks or EtherChannel members.
+
+================================================================================
+08. OSPF CONFIGURATION
+================================================================================
+
+Captured OSPF configuration:
+
+  router ospf 1
+   router-id 3.3.3.3
+   log-adjacency-changes
+   network 10.11.1.1 0.0.0.0 area 0
+   network 10.11.2.1 0.0.0.0 area 0
+   network 10.10.111.1 0.0.0.0 area 0
+   network 10.11.3.1 0.0.0.0 area 0
+   network 10.11.4.1 0.0.0.0 area 0
+   network 10.10.130.6 0.0.0.0 area 0
+
+OSPF summary
+------------
+
+  Process ID : 1
+  Router ID  : 3.3.3.3
+  Local area : Area 0 (Weilburg backbone)
+
+Advertised local interfaces:
+
+  10.11.1.1/30     Port-channel2      Towards Weil_A1
+  10.11.2.1/30     Port-channel3      Towards Weil_A2
+  10.11.3.1/30     GigabitEthernet1/0/1  Towards Weil_W1
+  10.11.4.1/30     GigabitEthernet1/0/2  Towards Weil_W2
+  10.10.111.1/32   Loopback1
+  10.10.130.6/29   Vlan130            Server VLAN
+
+The exact-address network statements use wildcard mask 0.0.0.0, matching the
+method specified in the competition task. Weil_C1 is an internal Area 0 device;
+the WAN routers connect Area 0 to the corporate Area 2 network.
+
+The running-config proves that OSPF is configured, but does not prove that
+neighbors are currently FULL or that a default route is being learned. Verify
+with:
+
+  show ip ospf neighbor
+  show ip ospf interface brief
+  show ip protocols
+  show ip route ospf
+  show ip route 0.0.0.0
+
+Expected neighbor relationships include the two access switches over the
+routed Port-channels and the two WAN routers over the routed /30 links. The
+exact neighbor state must be confirmed from live CLI output.
+
+================================================================================
+09. DEVICE MANAGEMENT AND SECURITY
+================================================================================
+
+Captured management configuration includes:
+
+  ip domain-name skill39.org
+  ip ssh version 2
+  username weiladmin secret <REDACTED>
+  enable secret <REDACTED>
+  access-list 1 permit 10.10.130.0 0.0.0.7
+  banner motd ^CUnauthorized Access is Strictly Prohibited^C
+
+Console line:
+
+  line con 0
+   login local
+
+VTY lines 0–4 and 5–15:
+
+  access-class 1 in
+  login local
+  transport input ssh
+
+ACL 1 allows the server subnet 10.10.130.0/29 to initiate remote management
+sessions to the switch. Because the ACL is applied inbound to the VTY lines,
+other source addresses are denied by the implicit deny at the end of the
+standard ACL.
+
+The captured running configuration shows `ip ssh version 2`, but it does not
+show the RSA key-generation command or prove that SSH is operational. Verify:
+
+  show ip ssh
+  show crypto key mypubkey rsa
+  show line
+  show access-lists 1
+
+The original type 5 hashes have been intentionally excluded. Do not publish
+passwords, password hashes, private keys or other credentials in this public
+repository.
+
+================================================================================
+10. FINDINGS AND ITEMS REQUIRING VERIFICATION
+================================================================================
+
+The following findings are based strictly on the supplied Weil_C1 running-
+configuration transcript and the official task requirements.
+
+A. Items that match the intended design
+---------------------------------------
+
+1. Loopback1 is configured as 10.10.111.1/32, matching the task appendix.
+2. OSPF process 1 uses router ID 3.3.3.3, matching the task.
+3. The two routed access-switch links use the expected /30 addresses:
+   - Port-channel2: 10.11.1.1/30 towards Weil_A1.
+   - Port-channel3: 10.11.2.1/30 towards Weil_A2.
+4. The routed WAN links use the expected local addresses:
+   - Gi1/0/1: 10.11.3.1/30 towards Weil_W1.
+   - Gi1/0/2: 10.11.4.1/30 towards Weil_W2.
+5. VLAN 130 SVI is configured as 10.10.130.6/29, matching the task appendix.
+6. The routed EtherChannel member interfaces use LACP active mode.
+7. SSH version 2, local console/VTY authentication, VTY source ACL 1 and the
+   MOTD banner are present in the captured configuration.
+8. No Port Security configuration is shown on Weil_C1. This is consistent with
+   the task requirement that Port Security be activated only on the access
+   switches.
+
+B. Configuration differences or possible compliance gaps
+---------------------------------------------------------
+
+1. Spanning Tree mode
+   Captured: `spanning-tree mode pvst`
+   Task: 802.1w / Rapid PVST+ on all switches.
+   Action: verify Packet Tracer support and the intended final mode.
+
+2. Server access-port mode
+   Captured Gi1/0/3–Gi1/0/20: `switchport access vlan 130` only.
+   Not shown: explicit `switchport mode access`.
+   Task: end-device interfaces must be fixed access ports.
+   Action: verify and, if supported/required, add explicit access mode.
+
+3. Server access-port STP protection
+   Captured Gi1/0/3–Gi1/0/20 do not show interface-level PortFast or BPDU Guard.
+   Task: access ports must use PortFast and BPDU protection configured on the
+   individual access interfaces.
+   Action: verify and correct if those ports connect to end devices/servers.
+
+4. VLAN database
+   A separate `vlan 130` stanza is not shown in the supplied running-config.
+   Action: confirm VLAN 130 is present and active using `show vlan brief`.
+
+5. SSH key state
+   SSH v2 is configured, but RSA key presence/SSH operational state is not
+   established by this transcript.
+   Action: check `show ip ssh` and `show crypto key mypubkey rsa`.
+
+6. OSPF operation
+   OSPF process and network statements are present, but no neighbor output or
+   learned route table was supplied for Weil_C1.
+   Action: collect `show ip ospf neighbor`, `show ip route ospf` and
+   `show ip route 0.0.0.0`.
+
+C. Not applicable / not present on this device in the supplied design
+---------------------------------------------------------------------
+
+- HSRP is configured on Weil_A1 and Weil_A2, not on Weil_C1.
+- DHCP relay is not shown on Vlan130; the DHCP server is directly attached to
+  this same server VLAN.
+- NAT/PAT and the Intranet extended ACL are configured on the WAN routers,
+  not on Weil_C1.
+
+D. Overall status
+-----------------
+
+Weil_C1 has the expected core addressing, routed EtherChannels, WAN routed
+interfaces, server SVI and OSPF process configuration. However, the supplied
+running-config shows PVST rather than Rapid PVST+, and the server access ports
+do not show explicit fixed-access mode, PortFast or BPDU Guard. Operational
+EtherChannel, OSPF, VLAN and SSH state still requires live verification.
+
+This record should therefore be treated as a sanitized configuration and
+compliance review, not a declaration that every task requirement has passed.
+
+================================================================================
+11. VERIFICATION COMMAND REFERENCE
+================================================================================
+
+GENERAL DEVICE STATE
+--------------------
+show running-config
+show ip interface brief
+show interfaces status
+show version
+
+VLAN AND SERVER ACCESS PORTS
+----------------------------
+show vlan brief
+show interfaces switchport
+show interfaces GigabitEthernet1/0/3 switchport
+show interfaces GigabitEthernet1/0/20 switchport
+show spanning-tree vlan 130
+
+ETHERCHANNEL AND LACP
+---------------------
+show etherchannel summary
+show interfaces port-channel2
+show interfaces port-channel3
+show lacp neighbor
+
+ROUTING AND OSPF
+----------------
+show ip route
+show ip route ospf
+show ip route 0.0.0.0
+show ip protocols
+show ip ospf
+show ip ospf neighbor
+show ip ospf interface brief
+
+MANAGEMENT AND SECURITY
+-----------------------
+show ip ssh
+show crypto key mypubkey rsa
+show access-lists 1
+show users
+
+END OF WEIL_C1 CONFIGURATION RECORD
+================================================================================

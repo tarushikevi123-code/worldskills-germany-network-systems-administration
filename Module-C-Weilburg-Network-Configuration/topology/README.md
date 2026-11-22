@@ -1,13 +1,10 @@
 # Weilburg Network Topology
 
-This directory is reserved for the topology diagram and Cisco Packet Tracer working project for Module C.
+This directory contains the Cisco Packet Tracer project for the WorldSkills Germany 2025 Module C – Weilburg enterprise network configuration.
 
-The network contains:
+## Project file
 
-- Weil_A1 – Layer 3 Access Switch 1
-- Weil_A2 – Layer 3 Access Switch 2
-- Weil_C1 – Core Layer 3 Switch
-- Weil_W1 – WAN Router 1
-- Weil_W2 – WAN Router 2
+- `Module C – Networking.pka` – Packet Tracer working project.
 
-The working Packet Tracer project and a topology screenshot will be added here when available.
+The project contains the network topology used for the Weilburg configuration work. The detailed implementation, device roles, addressing plan and verification results are documented in the [Module C project README](../README.md).
+

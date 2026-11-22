@@ -1,0 +1,823 @@
+================================================================================
+WORLD SKILLS GERMANY 2025 – IT NETWORK SYSTEMS ADMINISTRATION
+MODULE C – WEILBURG ENTERPRISE NETWORK
+DEVICE CONFIGURATION RECORD
+================================================================================
+
+DEVICE             : Weil_W1
+DEVICE ROLE        : WAN Router / OSPF Area Border Router (Area 0 to Area 2)
+PLATFORM           : Cisco Packet Tracer
+IOS VERSION        : 15.4 (as shown in the captured running configuration)
+SOURCE             : User-provided running-config plus later operational CLI outputs
+DOCUMENT TYPE      : Sanitized and normalized configuration record
+SOURCE ACCURACY    : Sanitized configuration record with separately identified live verification snapshots
+
+IMPORTANT
+---------
+This document preserves the configuration shown in the supplied transcript.
+It is intended for public project documentation and technical review. It is
+NOT a ready-to-paste replacement configuration.
+
+Sensitive type 5 password hashes have been redacted. The enable secret and
+local user secret are not reproduced. Do not publish the original credentials,
+hashes, private keys or other authentication material in a public repository.
+
+No configuration commands have been added to make the device appear compliant.
+Where a requirement is not visible in the captured running configuration, it
+is identified as missing from the evidence and listed for verification.
+
+================================================================================
+CONTENTS
+================================================================================
+
+01. Device role and design summary
+02. Sanitized running configuration
+03. Management and loopback addressing
+04. WAN interfaces and bandwidth
+05. OSPF routing and Area Border Router role
+06. Default route and route advertisement
+07. NAT/PAT configuration
+08. Intranet access-control policy
+09. Device management and security
+10. Operational verification evidence
+11. Findings and items requiring verification
+12. Verification command reference
+
+================================================================================
+01. DEVICE ROLE AND DESIGN SUMMARY
+================================================================================
+
+Weil_W1 is one of the two WAN routers serving the Weilburg site. It connects
+the Weilburg Layer 3 core switch to the corporate network and the ISP. It is
+intended to act as an OSPF Area Border Router between site Area 0 and corporate
+Area 2. It also provides internet NAT/PAT for the internal VLAN networks and
+applies the intranet access-control policy to traffic arriving from the site.
+
+The captured configuration shows these roles and connections:
+
+- GigabitEthernet0/0/0 connects to Weil_C1 using 10.11.3.2/30.
+- Serial0/1/0 connects to the ISP using 195.198.11.1/30.
+- Serial0/2/0 connects to the corporate network using 172.20.20.1/30.
+- Loopback1 provides the router management/OSPF identifier address
+  10.10.111.4/32.
+- OSPF process 1 uses router ID 4.4.4.4.
+- A static default route points to the ISP next hop 195.198.11.2.
+- OSPF `default-information originate` advertises the default route.
+- NAT overload uses the ISP-facing Serial0/1/0 interface.
+- Named standard ACL `vlans` identifies the internal VLAN subnets for NAT.
+- Named extended ACL `intranet` permits HTTPS to 192.168.66.200, denies HTTP
+  to that host, and permits other IP traffic.
+- ACL `intranet` is applied inbound on the Weilburg-facing interface.
+- SSH version 2, local authentication and a VTY source ACL are configured.
+
+Expected addressing from the official task specifications:
+
+  Weil_C1 <-> Weil_W1
+    Weil_C1 Gi1/0/1 : 10.11.3.1/30
+    Weil_W1 Gi0/0/0 : 10.11.3.2/30
+
+  Weil_W1 <-> ISP
+    Weil_W1 Serial0/1/0 : 195.198.11.1/30
+    ISP next hop         : 195.198.11.2
+
+  Weil_W1 <-> Corporate network
+    Weil_W1 Serial0/2/0 : 172.20.20.1/30
+
+The competition task specifies that Weil_W1 is the faster of the two WAN
+routers' ISP connections. It also specifies bandwidth values for the WAN
+interfaces; the values shown in this capture are recorded in Section 04.
+
+================================================================================
+02. SANITIZED RUNNING CONFIGURATION (ORGANIZED)
+================================================================================
+
+The following configuration is transcribed from the supplied `show
+running-config` output. Terminal prompts and login interaction have been
+omitted. Sensitive hashes are deliberately redacted. Later operational
+outputs are documented separately in Section 10; they are not silently merged
+into this earlier configuration snapshot.
+
+! -----------------------------------------------------------------------------
+! GLOBAL CONFIGURATION
+! -----------------------------------------------------------------------------
+version 15.4
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+service password-encryption
+hostname Weil_W1
+
+! Sensitive values deliberately removed from this public record.
+enable secret <REDACTED – do not publish the original hash>
+username weiladmin secret <REDACTED – do not publish the original hash>
+
+no ip cef
+no ipv6 cef
+ip ssh version 2
+ip domain-name skill39.org
+
+! The captured router configuration shows PVST mode. STP is a switch-layer
+! requirement in this topology and is not normally configured on this router.
+spanning-tree mode pvst
+
+! -----------------------------------------------------------------------------
+! LOOPBACK / MANAGEMENT ADDRESS
+! -----------------------------------------------------------------------------
+interface Loopback1
+ ip address 10.10.111.4 255.255.255.255
+!
+
+! -----------------------------------------------------------------------------
+! CONNECTION TO WEIL_C1 – WEILBURG AREA 0
+! -----------------------------------------------------------------------------
+interface GigabitEthernet0/0/0
+ ip address 10.11.3.2 255.255.255.252
+ ip nat inside
+ ip access-group intranet in
+ duplex auto
+ speed auto
+!
+
+! -----------------------------------------------------------------------------
+! UNUSED / UNADDRESSED GIGABIT ETHERNET INTERFACES
+! -----------------------------------------------------------------------------
+interface GigabitEthernet0/0/1
+ no ip address
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet0/0/2
+ no ip address
+ duplex auto
+ speed auto
+!
+
+! -----------------------------------------------------------------------------
+! ISP-FACING WAN INTERFACE – NAT OUTSIDE
+! -----------------------------------------------------------------------------
+interface Serial0/1/0
+ bandwidth 10000
+ ip address 195.198.11.1 255.255.255.252
+ ip nat outside
+ clock rate 2000000
+!
+
+! -----------------------------------------------------------------------------
+! UNUSED SERIAL INTERFACE
+! -----------------------------------------------------------------------------
+interface Serial0/1/1
+ no ip address
+ clock rate 2000000
+ shutdown
+!
+
+! -----------------------------------------------------------------------------
+! CORPORATE-FACING WAN INTERFACE
+! -----------------------------------------------------------------------------
+interface Serial0/2/0
+ bandwidth 5000
+ ip address 172.20.20.1 255.255.255.252
+ clock rate 2000000
+!
+
+! -----------------------------------------------------------------------------
+! UNUSED SERIAL INTERFACE
+! -----------------------------------------------------------------------------
+interface Serial0/2/1
+ no ip address
+ clock rate 2000000
+ shutdown
+!
+
+! -----------------------------------------------------------------------------
+! DEFAULT VLAN INTERFACE
+! -----------------------------------------------------------------------------
+interface Vlan1
+ no ip address
+ shutdown
+!
+
+! -----------------------------------------------------------------------------
+! OSPF PROCESS 1
+! -----------------------------------------------------------------------------
+router ospf 1
+ router-id 4.4.4.4
+ log-adjacency-changes
+ network 10.10.111.4 0.0.0.0 area 0
+ network 10.11.3.2 0.0.0.0 area 0
+ network 195.198.11.1 0.0.0.0 area 0
+ network 172.20.20.1 0.0.0.0 area 0
+ default-information originate
+!
+
+! -----------------------------------------------------------------------------
+! NAT/PAT – OVERLOAD ON THE ISP-FACING SERIAL INTERFACE
+! -----------------------------------------------------------------------------
+ip nat inside source list vlans interface Serial0/1/0 overload
+
+! -----------------------------------------------------------------------------
+! STATIC DEFAULT ROUTE – NEXT-HOP FORM
+! -----------------------------------------------------------------------------
+ip classless
+ip route 0.0.0.0 0.0.0.0 195.198.11.2
+
+! -----------------------------------------------------------------------------
+! FLOW EXPORT SETTING
+! -----------------------------------------------------------------------------
+ip flow-export version 9
+
+! -----------------------------------------------------------------------------
+! NAMED STANDARD ACL – INTERNAL NETWORKS SELECTED FOR NAT
+! -----------------------------------------------------------------------------
+ip access-list standard vlans
+ permit 10.10.2.0 0.0.0.31
+ permit 10.10.4.0 0.0.0.15
+ permit 10.10.6.0 0.0.0.63
+ permit 10.10.8.0 0.0.0.7
+ permit 10.10.130.0 0.0.0.7
+!
+
+! -----------------------------------------------------------------------------
+! NUMBERED STANDARD ACL – SSH SOURCE RESTRICTION
+! -----------------------------------------------------------------------------
+access-list 1 permit 10.10.130.0 0.0.0.7
+!
+
+! -----------------------------------------------------------------------------
+! NAMED EXTENDED ACL – INTRANET HTTP/HTTPS POLICY
+! -----------------------------------------------------------------------------
+ip access-list extended intranet
+ permit tcp any host 192.168.66.200 eq 443
+ deny tcp any host 192.168.66.200 eq www
+ permit ip any any
+!
+
+! -----------------------------------------------------------------------------
+! MOTD BANNER
+! -----------------------------------------------------------------------------
+banner motd ^CUnauthorized Access is Strictly Prohibited^C
+
+! -----------------------------------------------------------------------------
+! CONSOLE AND VTY MANAGEMENT
+! -----------------------------------------------------------------------------
+line con 0
+ login local
+!
+line aux 0
+!
+line vty 0 4
+ access-class 1 in
+ login local
+ transport input ssh
+!
+line vty 5 15
+ access-class 1 in
+ login local
+ transport input ssh
+!
+end
+
+================================================================================
+03. MANAGEMENT AND LOOPBACK ADDRESSING
+================================================================================
+
+Captured Loopback1 configuration:
+
+  interface Loopback1
+   ip address 10.10.111.4 255.255.255.255
+
+CAPTURED ADDRESS: 10.10.111.4/32
+
+SPECIFICATION COMPARISON:
+The official task specifies Weil_W1 Loopback1 as 10.10.111.4/32. The captured
+configuration matches the required address.
+
+The OSPF router ID is configured explicitly as 4.4.4.4, also matching the
+official task specification.
+
+================================================================================
+04. WAN INTERFACES AND BANDWIDTH
+================================================================================
+
+A. Weilburg core connection
+---------------------------
+
+  Interface : GigabitEthernet0/0/0
+  Address   : 10.11.3.2/30
+  Function  : Routed connection to Weil_C1
+  NAT role  : ip nat inside
+  ACL       : ip access-group intranet in
+
+The address matches the expected point-to-point network 10.11.3.0/30, where
+Weil_C1 uses 10.11.3.1/30 and Weil_W1 uses 10.11.3.2/30.
+
+B. ISP connection
+-----------------
+
+  Interface : Serial0/1/0
+  Address   : 195.198.11.1/30
+  Bandwidth : 10000
+  NAT role  : ip nat outside
+  Clock rate: 2000000 (as captured)
+  Next hop  : 195.198.11.2
+
+The interface address, configured bandwidth value and ISP next-hop address
+match the values specified for Weil_W1 in the task appendix.
+
+C. Corporate network connection
+--------------------------------
+
+  Interface : Serial0/2/0
+  Address   : 172.20.20.1/30
+  Bandwidth : 5000
+  Clock rate: 2000000 (as captured)
+
+D. Other interfaces
+-------------------
+
+The captured configuration shows GigabitEthernet0/0/1 and
+GigabitEthernet0/0/2 without IP addresses. Serial0/1/1 and Serial0/2/1 are
+also unaddressed and administratively shut down. Vlan1 has no IP address and
+is shut down.
+
+================================================================================
+05. OSPF ROUTING AND AREA BORDER ROUTER ROLE
+================================================================================
+
+OSPF configuration in the original `show running-config` transcript:
+
+  router ospf 1
+   router-id 4.4.4.4
+   log-adjacency-changes
+   network 10.10.111.4 0.0.0.0 area 0
+   network 10.11.3.2 0.0.0.0 area 0
+   network 195.198.11.1 0.0.0.0 area 0
+   network 172.20.20.1 0.0.0.0 area 0
+   default-information originate
+
+The task specifies:
+
+- OSPF process ID 1.
+- Router ID 4.4.4.4 for Weil_W1.
+- Weilburg site interfaces in backbone Area 0.
+- Corporate-facing WAN interfaces in Area 2.
+- Interface-to-area assignment using OSPF `network` statements with the exact
+  interface IP address and wildcard mask 0.0.0.0.
+- The two WAN routers act as Area Border Routers between Weilburg Area 0 and
+  corporate Area 2.
+
+CURRENT OPERATIONAL AREA ASSIGNMENT (from later CLI output):
+
+  Loopback1       10.10.111.4/32     Area 0
+  GigabitEthernet0/0/0 10.11.3.2/30  Area 0
+  Serial0/1/0     195.198.11.1/30    Area 0
+  Serial0/2/0     172.20.20.1/30    Area 2
+
+================================================================================
+06. DEFAULT ROUTE AND ROUTE ADVERTISEMENT
+================================================================================
+
+Captured static default route:
+
+  ip route 0.0.0.0 0.0.0.0 195.198.11.2
+
+Captured OSPF default advertisement:
+
+  router ospf 1
+   default-information originate
+
+The task requires the default route to be configured using a next-hop IP
+address and distributed through OSPF. The captured configuration meets the
+static-route syntax requirement and includes OSPF default-information
+origination.
+
+The default route points to 195.198.11.2, the next-hop address on the ISP
+subnet. The route should be present in the routing table for
+`default-information originate` to advertise it; confirm this operationally.
+
+Verification:
+
+  show ip route 0.0.0.0
+  show ip route
+  show ip ospf database external
+  show ip ospf
+
+================================================================================
+07. NAT/PAT CONFIGURATION
+================================================================================
+
+The router uses the named standard ACL `vlans` to select internal source
+networks for translation. The ISP-facing Serial0/1/0 interface is configured
+as NAT outside, and the Weilburg-facing GigabitEthernet0/0/0 interface is
+configured as NAT inside.
+
+Captured NAT role configuration:
+
+  interface GigabitEthernet0/0/0
+   ip nat inside
+
+  interface Serial0/1/0
+   ip nat outside
+
+Captured overload rule:
+
+  ip nat inside source list vlans interface Serial0/1/0 overload
+
+Captured ACL `vlans`:
+
+  ip access-list standard vlans
+   permit 10.10.2.0 0.0.0.31
+   permit 10.10.4.0 0.0.0.15
+   permit 10.10.6.0 0.0.0.63
+   permit 10.10.8.0 0.0.0.7
+   permit 10.10.130.0 0.0.0.7
+
+Subnet coverage:
+
+  VLAN 2   HR           10.10.2.0/27     wildcard 0.0.0.31
+  VLAN 4   SALES        10.10.4.0/28     wildcard 0.0.0.15
+  VLAN 6   ENGINEERING  10.10.6.0/26     wildcard 0.0.0.63
+  VLAN 8   WLAN         10.10.8.0/29     wildcard 0.0.0.7
+  VLAN 130 SERVER       10.10.130.0/29   wildcard 0.0.0.7
+
+The five ACL entries match the VLAN subnet ranges defined in the task. PAT
+uses the public address configured on Serial0/1/0, allowing multiple internal
+hosts to share the ISP-facing interface address.
+
+The configuration statements are present, but successful translations and
+internet reachability have not been demonstrated by this running-config alone.
+Verify with NAT translation/statistics commands and end-to-end tests.
+
+================================================================================
+08. INTRANET ACCESS-CONTROL POLICY
+================================================================================
+
+Captured extended ACL:
+
+  ip access-list extended intranet
+   permit tcp any host 192.168.66.200 eq 443
+   deny tcp any host 192.168.66.200 eq www
+   permit ip any any
+
+Captured interface application:
+
+  interface GigabitEthernet0/0/0
+   ip access-group intranet in
+
+The policy implements the requested behavior for the intranet server:
+
+- HTTPS (TCP port 443) to 192.168.66.200 is explicitly permitted.
+- HTTP (TCP port 80, represented by `www`) to 192.168.66.200 is denied.
+- Other IP traffic is permitted by the final ACL entry.
+
+The ACL is applied inbound on the Weilburg-facing interface. This allows the
+router to inspect traffic as it enters from the site, close to the source.
+The captured placement and ACL entries match the task's stated policy for
+Weil_W1.
+
+Actual HTTPS/HTTP reachability and ACL hit counts require live testing.
+
+================================================================================
+09. DEVICE MANAGEMENT AND SECURITY
+================================================================================
+
+Captured management configuration includes:
+
+  hostname Weil_W1
+  ip domain-name skill39.org
+  ip ssh version 2
+  username weiladmin secret <REDACTED>
+  enable secret <REDACTED>
+  service password-encryption
+  access-list 1 permit 10.10.130.0 0.0.0.7
+  banner motd ^CUnauthorized Access is Strictly Prohibited^C
+
+Console line:
+
+  line con 0
+   login local
+
+VTY lines 0–4 and 5–15:
+
+  access-class 1 in
+  login local
+  transport input ssh
+
+ACL 1 permits the server subnet 10.10.130.0/29 as a source for remote
+management. It is applied inbound to both VTY line ranges. The implicit deny
+at the end of the standard ACL blocks other source networks.
+
+The captured configuration therefore shows SSH-only VTY transport and local
+authentication for console and VTY access. It also shows SSH version 2 and
+the required MOTD banner.
+
+The running-config transcript does not show RSA key material or prove that SSH
+is operational. Verify key presence and SSH state separately.
+
+The original type 5 hashes have intentionally been excluded. Do not publish
+passwords, password hashes, private keys or other credentials in this public
+repository.
+
+================================================================================
+10. OPERATIONAL VERIFICATION EVIDENCE
+================================================================================
+
+The following outputs were supplied after the original running-config
+transcript. They provide a later snapshot of W1's operational state. They are
+kept separate from the original configuration excerpt because the OSPF Area
+assignment differs between the two snapshots.
+
+A. CDP NEIGHBORS
+----------------
+
+The supplied `show cdp neighbors` output identified:
+
+  Local interface  Serial0/1/0  -> Neighbor ISP       Port Serial0/1/0
+  Local interface  Serial0/2/0  -> Neighbor Corporate Port Serial0/1/0
+  Local interface  GigabitEthernet0/0/0 -> Neighbor Weil_C1 Port GigabitEthernet1/0/1
+
+This confirms the documented physical/logical neighbor mapping visible to
+W1 through CDP.
+
+B. LIVE OSPF INTERFACE AREA
+---------------------------
+
+The supplied `show ip ospf interface brief` output reported:
+
+  Interface       Area   Address/Mask             Cost  State
+  Lo1             0      10.10.111.4/32            1    WAIT
+  Gig0/0/0        0      10.11.3.2/30              1    DR
+  Se0/1/0         0      195.198.11.1/30           10   POINT
+  Se0/2/0         2      172.20.20.1/30            20   POINT
+
+This confirms that Serial0/2/0 was operationally assigned to Area 2, as
+required, despite the earlier running-config transcript showing an Area 0
+network statement for the same address.
+
+C. OSPF NEIGHBOR STATES
+-----------------------
+
+The supplied `show ip ospf neighbor` output reported:
+
+  Neighbor ID 3.3.3.3  State FULL/BDR  Address 10.11.3.1  Interface Gi0/0/0
+  Neighbor ID 6.6.6.6  State EXSTART   Address 172.20.20.2 Interface Se0/2/0
+
+The detailed output for neighbor 3.3.3.3 showed FULL state, zero entries in
+the retransmission queue and an established neighbor uptime of approximately
+38 minutes at the time of capture.
+
+The detailed output for neighbor 6.6.6.6 showed:
+
+  Interface       : Serial0/2/0
+  Neighbor address: 172.20.20.2
+  OSPF area       : 2
+  State           : EXSTART
+  State changes   : 11254
+  Neighbor uptime : approximately 1 minute 17 seconds
+  Retransmission queue length: 0
+
+Therefore, the OSPF adjacency with Weil_C1 is confirmed FULL, while the
+corporate-side neighbor was still in EXSTART in the detailed neighbor
+snapshot. EXSTART is not a FULL adjacency and indicates that database
+synchronization has not completed. The high state-change count suggests
+repeated negotiation/restarts.
+
+The separate `show ip ospf interface Serial0/2/0` output reported:
+
+  Area 2
+  Network type POINT-TO-POINT
+  Cost 20
+  Neighbor Count 1
+  Adjacent neighbor count 1
+  Adjacent with neighbor 6.6.6.6
+
+This interface summary conflicts with the detailed neighbor output that
+showed EXSTART. These outputs may represent different moments or a Packet
+Tracer reporting inconsistency. For the captured neighbor-state diagnosis,
+the explicit `show ip ospf neighbor detail` result is recorded as EXSTART.
+
+D. CORPORATE LINK CONNECTIVITY AND INTERFACE HEALTH
+---------------------------------------------------
+
+The supplied ping test to 172.20.20.2 returned:
+
+  !!!!!
+  Success rate is 100 percent (5/5)
+
+The supplied `show interfaces Serial0/2/0` output reported:
+
+  Interface/line protocol : up/up
+  IP address              : 172.20.20.1/30
+  MTU                     : 1500 bytes
+  Bandwidth               : 5000 Kbit
+  Encapsulation            : HDLC
+  Input errors / CRC       : 0 / 0
+  Output errors            : 0
+  Total output drops       : 0
+  Carrier transitions      : 0
+
+This confirms basic IP reachability to the corporate peer and a healthy
+local serial interface at the time of capture. The 5-packet ping uses small
+ICMP packets; it does not establish that the peer's MTU matches W1's MTU.
+The MTU on the corporate-side interface is not available because the user
+does not have access to that router.
+
+E. LOG REVIEW AND PACKET TRACER COMMAND SUPPORT
+----------------------------------------------
+
+The supplied `show logging` output contained link state messages and OSPF
+adjacency messages for neighbor 3.3.3.3. It did not contain a specific MTU
+mismatch message or a diagnostic message explaining why neighbor 6.6.6.6 was
+stuck in EXSTART. The logs included a prior Serial0/2/0 down/up event and
+neighbor 3.3.3.3 transitions associated with interface/link events.
+
+The command help output for `ip ospf ?` did not list `mtu-ignore` as a
+supported interface-level OSPF option in this Packet Tracer IOS image. The
+command was therefore not configured. Do not assume that this simulator image
+supports that command.
+
+F. BANDWIDTH REQUIREMENTS
+-------------------------
+
+The task reference specifies:
+
+  Serial0/1/0 (ISP)       bandwidth 10000 Kbit/s
+  Serial0/2/0 (Corporate) bandwidth 5000 Kbit/s
+
+================================================================================
+11. FINDINGS AND ITEMS REQUIRING VERIFICATION
+================================================================================
+
+The following findings combine the original Weil_W1 running-configuration
+transcript, later operational CLI outputs, and the official Module C task
+requirements. The two configuration snapshots are distinguished where they
+differ.
+
+A. Items that match the intended design
+---------------------------------------
+
+1. Hostname is Weil_W1 and the captured IOS version is 15.4.
+2. Loopback1 is configured as 10.10.111.4/32, matching the task.
+3. OSPF process 1 uses router ID 4.4.4.4, matching the task.
+4. GigabitEthernet0/0/0 is configured as 10.11.3.2/30 towards Weil_C1.
+5. Serial0/1/0 is configured as 195.198.11.1/30 towards the ISP.
+6. Serial0/2/0 is configured as 172.20.20.1/30 towards the corporate network.
+7. The ISP-facing interface bandwidth is 10000, and the corporate-facing
+   interface bandwidth is 5000, matching the values in the task appendix.
+8. The static default route uses next hop 195.198.11.2.
+9. `default-information originate` is present under OSPF process 1.
+10. NAT inside/outside roles and the PAT overload rule are present.
+11. ACL `vlans` includes the five specified VLAN subnet ranges: VLANs 2, 4, 6,
+    8 and 130.
+12. Extended ACL `intranet` permits HTTPS, denies HTTP to 192.168.66.200 and
+    permits other IP traffic.
+13. ACL `intranet` is applied inbound on the Weilburg-facing interface.
+14. SSH version 2, local console/VTY authentication, SSH-only VTY transport,
+    VTY ACL 1 and the required MOTD banner are present.
+
+B. Historical configuration difference (not a current area mismatch)
+---------------------------------------------------------------------
+
+1. Corporate-facing OSPF area assignment
+
+   Original running-config snapshot : 172.20.20.1 assigned to Area 0
+   Later live OSPF interface output : Serial0/2/0 assigned to Area 2
+   Required OSPF area              : Area 2
+
+   The later `show ip ospf interface brief` output confirms that the live
+   interface assignment matches the task. The original running-config
+   transcript is therefore an earlier or stale snapshot. Capture an updated
+   `show running-config` and save the configuration if this is the intended
+   final state. The supplied evidence does not establish whether the change
+   was saved to startup-config.
+
+2. Corporate-side OSPF adjacency
+
+   Neighbor router ID : 6.6.6.6
+   Neighbor address   : 172.20.20.2
+   Local interface    : Serial0/2/0
+   Observed state     : EXSTART
+
+   This is the main unresolved operational issue. Basic IP connectivity is
+   successful (5/5 ping replies), and the local serial interface is up/up,
+   but the detailed OSPF neighbor output did not show FULL. The cause cannot
+   be determined conclusively without the corporate router's interface and
+   OSPF configuration or more specific OSPF debug output. MTU mismatch is
+   one possible cause, not a confirmed diagnosis.
+
+C. Items requiring operational verification (not proven by running-config)
+----------------------------------------------------------------------------
+
+1. OSPF adjacency and Area Border Router operation
+   The later output confirms FULL with Weil_C1 (3.3.3.3), but the corporate-
+   side neighbor (6.6.6.6) remains EXSTART. Diagnose this adjacency before
+   treating corporate routing as fully operational.
+
+2. Default route installation and advertisement
+   The static route and `default-information originate` are configured, but
+   the active RIB and OSPF external LSA were not supplied. Confirm that the
+   default route is installed and advertised into the required OSPF areas.
+
+3. NAT/PAT operation
+   Configuration is present, but no NAT translation table or statistics were
+   supplied. Generate traffic from internal VLAN hosts and inspect the
+   resulting translations.
+
+4. Intranet ACL behavior
+   ACL entries and inbound placement are present. Test HTTPS access to
+   192.168.66.200, confirm HTTP is blocked, and inspect ACL counters.
+
+5. SSH/RSA key state
+   SSH version 2 is configured, but the transcript does not establish that an
+   RSA key pair exists or that a remote SSH session succeeds. Verify key and
+   SSH operational state.
+
+6. Interface and serial link state
+   Serial0/2/0 was confirmed up/up with MTU 1500 and no reported input/CRC
+   or output errors. The 5/5 ping to 172.20.20.2 confirms basic reachability.
+   Capture current status for the other active interfaces as well.
+
+D. Not applicable / not expected on this device
+-----------------------------------------------
+
+- HSRP is configured on Weil_A1 and Weil_A2, not on the WAN router.
+- Switch Port Security, PortFast and BPDU Guard are access-switch requirements.
+- Weil_W1 does not host VLAN SVIs or DHCP relay interfaces in this design.
+
+E. Overall status
+-----------------
+
+
+The default-route advertisement, NAT translations, intranet filtering and
+SSH operation still require live verification. This record is a sanitized
+configuration and compliance review, not a declaration that every task
+requirement has passed.
+
+================================================================================
+12. VERIFICATION COMMAND REFERENCE
+================================================================================
+
+GENERAL DEVICE AND INTERFACE STATE
+----------------------------------
+show running-config
+show ip interface brief
+show interfaces description
+show interfaces GigabitEthernet0/0/0
+show interfaces Serial0/1/0
+show interfaces Serial0/2/0
+show cdp neighbors
+show logging
+show version
+
+WAN ADDRESSING AND BANDWIDTH
+----------------------------
+show controllers serial 0/1/0
+show controllers serial 0/2/0
+show interfaces Serial0/1/0
+show interfaces Serial0/2/0
+show ip route 195.198.11.2
+
+OSPF AND ROUTING
+----------------
+show ip protocols
+show ip ospf
+show ip ospf neighbor
+show ip ospf neighbor detail
+show ip ospf interface brief
+show ip ospf interface Serial0/2/0
+show ip ospf interface Serial0/2/0 detail
+show ip ospf database
+show ip ospf database external
+show ip route
+show ip route ospf
+show ip route 0.0.0.0
+
+NAT/PAT
+-------
+show ip nat translations
+show ip nat statistics
+show access-lists vlans
+
+INTRANET ACL
+------------
+show access-lists intranet
+show ip interface GigabitEthernet0/0/0
+
+MANAGEMENT AND SECURITY
+-----------------------
+show ip ssh
+show crypto key mypubkey rsa
+show access-lists 1
+show users
+
+END-TO-END TESTS
+----------------
+- From an internal VLAN host, test internet reachability to the external test
+  server specified by the project environment.
+- From an internal VLAN host, test HTTPS access to 192.168.66.200.
+- From an internal VLAN host, test that HTTP access to 192.168.66.200 is denied.
+- Confirm that the corporate OSPF neighbor 6.6.6.6 reaches FULL on Serial0/2/0.
+- From a host in VLAN 130, test SSH access to Weil_W1.
+- From a non-server VLAN host, confirm SSH access to Weil_W1 is denied.
+
+END OF WEIL_W1 CONFIGURATION RECORD
+================================================================================

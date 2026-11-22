@@ -181,8 +181,8 @@ Device configuration exports are stored in the `configurations/` directory:
 
 ## 8. Project Files
 
-- Cisco Packet Tracer working topology (to be added).
-- Five device configuration exports (to be added).
+- [Cisco Packet Tracer working topology](topology/Module%20C%20%E2%80%93%20Networking.pka).
+- Five device configuration exports in `configurations/` (to be added).
 - Network addressing and topology documentation.
 - Verification screenshots and test evidence.
 - Configuration and troubleshooting notes.

@@ -1,0 +1,606 @@
+================================================================================
+WORLD SKILLS GERMANY 2025 – IT NETWORK SYSTEMS ADMINISTRATION
+MODULE C – WEILBURG ENTERPRISE NETWORK
+DEVICE CONFIGURATION RECORD
+================================================================================
+
+DEVICE             : Weil_A1
+DEVICE ROLE        : Layer 3 Access Switch 1
+PLATFORM           : Cisco Packet Tracer
+IOS VERSION        : 16.3.2 (as shown in the captured running configuration)
+SOURCE             : User-provided `show running-config` terminal transcript
+DOCUMENT TYPE      : Sanitized and normalized configuration record
+SOURCE ACCURACY    : Based on captured CLI output; not a byte-for-byte export
+
+IMPORTANT
+---------
+This document is intended for public project documentation and review. It is
+not a ready-to-paste replacement configuration. Password hashes have been
+redacted, repeated terminal-pager artefacts have been normalized, and items
+that need verification are explicitly identified below.
+
+The uploaded terminal transcript contains pager artefacts (`--More--`) and a
+repeated display of the GigabitEthernet1/0/10 and OSPF sections. Each is shown
+once in this normalized record. No configuration commands have been silently
+changed to make the device appear compliant.
+
+================================================================================
+1. DEVICE ROLE AND DESIGN SUMMARY
+================================================================================
+
+Weil_A1 is the first Layer 3 access switch in the Weilburg site. It provides:
+
+- Layer 2 access connectivity for HR, Sales, Engineering and WLAN VLANs.
+- Layer 3 Switch Virtual Interfaces (SVIs) for VLANs 2, 4, 6 and 8.
+- HSRP gateway redundancy for the four user VLANs.
+- A Layer 2 LACP EtherChannel (Port-channel1) towards Weil_A2.
+- A routed LACP EtherChannel (Port-channel2) towards Weil_C1.
+- OSPF process 1 participation in Area 0.
+- DHCP relay towards the centralized DHCP server.
+- Port Security, PortFast and BPDU Guard on end-device access ports.
+- SSH-only remote management with a source ACL.
+
+Intended HSRP active-gateway distribution:
+
+  Weil_A1 – preferred Active for VLAN 2 (HR) and VLAN 4 (Sales)
+  Weil_A1 – Standby for VLAN 6 (Engineering) and VLAN 8 (WLAN)
+
+================================================================================
+2. GLOBAL DEVICE CONFIGURATION
+================================================================================
+
+version 16.3.2
+no service timestamps log datetime msec
+service timestamps debug datetime msec
+service password-encryption
+hostname Weil_A1
+no profinet
+no ip cef
+ip routing
+no ipv6 cef
+ip ssh version 2
+ip domain-name skill39.org
+
+! Sensitive values deliberately removed from this public record.
+! The source running-config contained type 5 password hashes for both values.
+enable secret <REDACTED – do not publish the original hash>
+username weiladmin secret <REDACTED – do not publish the original hash>
+
+banner motd ^CUnauthorized Access is Strictly Prohibited^C
+
+! The running-config confirms SSH version 2 and the domain name.
+! RSA key material is not displayed in this running-config transcript.
+! Verify key presence with: show crypto key mypubkey rsa
+
+================================================================================
+3. MANAGEMENT AND LOOPBACK ADDRESSING
+================================================================================
+
+interface Loopback1
+ ip address 10.10.111.2 255.255.255.255
+!
+
+
+================================================================================
+4. VLAN AND IPv4 SVI CONFIGURATION
+================================================================================
+
+The captured running configuration contains the following SVI definitions.
+
+VLAN 2 – HR
+-----------
+interface Vlan2
+ mac-address 00d0.bc68.db01
+ ip address 10.10.2.29 255.255.255.224
+ ip helper-address 10.10.130.2
+ standby 2 ip 10.10.2.30
+ standby 2 priority 115
+ standby 2 preempt
+ standby 2 track GigabitEthernet1/0/23
+ standby 2 track GigabitEthernet1/0/24
+!
+
+VLAN 4 – SALES
+--------------
+interface Vlan4
+ mac-address 00d0.bc68.db02
+ ip address 10.10.4.13 255.255.255.240
+ ip helper-address 10.10.130.2
+ standby 4 ip 10.10.4.14
+ standby 4 priority 115
+ standby 4 preempt
+ standby 4 track GigabitEthernet1/0/23
+ standby 4 track GigabitEthernet1/0/24
+!
+
+VLAN 6 – ENGINEERING
+--------------------
+interface Vlan6
+ mac-address 00d0.bc68.db03
+ ip address 10.10.6.61 255.255.255.192
+ ip helper-address 10.10.130.2
+ standby 6 ip 10.10.6.62
+ standby 6 preempt
+ standby 6 track GigabitEthernet1/0/23
+ standby 6 track GigabitEthernet1/0/24
+ standby 2 track GigabitEthernet1/0/23
+ standby 2 track GigabitEthernet1/0/24
+!
+
+VLAN 8 – WLAN
+-------------
+interface Vlan8
+ mac-address 00d0.bc68.db04
+ ip address 10.10.8.5 255.255.255.248
+ ip helper-address 10.10.130.2
+ standby 8 ip 10.10.8.6
+ standby 8 preempt
+ standby 8 track GigabitEthernet1/0/23
+ standby 8 track GigabitEthernet1/0/24
+ standby 2 track GigabitEthernet1/0/23
+ standby 2 track GigabitEthernet1/0/24
+!
+
+VLAN 1
+-----
+interface Vlan1
+ no ip address
+ shutdown
+!
+
+SVI / GATEWAY SUMMARY
+---------------------
+VLAN  Purpose       Weil_A1 SVI       HSRP Virtual IP
+----  ------------  ----------------  ----------------
+2     HR            10.10.2.29/27     10.10.2.30
+4     Sales         10.10.4.13/28     10.10.4.14
+6     Engineering   10.10.6.61/26     10.10.6.62
+8     WLAN          10.10.8.5/29      10.10.8.6
+
+DHCP relay target on each user SVI: 10.10.130.2
+
+================================================================================
+5. HSRP CONFIGURATION AND PACKET TRACER ADAPTATION
+================================================================================
+
+HSRP version:
+- No explicit `standby version` command appears in the captured running config.
+- The task requires HSRP version 1; Cisco's default HSRP version is version 1.
+- Confirm the active version with `show standby` on the device.
+
+HSRP group numbers:
+- VLAN 2 uses group 2.
+- VLAN 4 uses group 4.
+- VLAN 6 uses group 6.
+- VLAN 8 uses group 8.
+
+Captured priority / preemption:
+- VLAN 2: priority 115; preemption enabled.
+- VLAN 4: priority 115; preemption enabled.
+- VLAN 6: no explicit priority command captured; preemption enabled.
+- VLAN 8: no explicit priority command captured; preemption enabled.
+
+The expected default priority for an HSRP group with no explicit priority
+command is normally 100, but verify the effective values with `show standby`.
+
+PACKET TRACER TRACKING ADAPTATION
+---------------------------------
+The implementation tracks the two physical members of the routed uplink
+EtherChannel separately:
+
+  GigabitEthernet1/0/23
+  GigabitEthernet1/0/24
+
+This was used because the Packet Tracer version in the lab did not support the
+Port-channel interface as the HSRP tracking target. The design intent is to
+avoid an unnecessary gateway switchover when only one EtherChannel member fails,
+while allowing the peer to become Active if both physical members fail.
+
+The captured HSRP tracking commands do not include an explicit decrement value.
+Verify the effective decrement shown by `show standby` before relying on a
+priority/failover calculation. Do not assume the calculated priority without
+checking the simulator's displayed tracking state.
+
+IMPORTANT HSRP ITEMS TO REVIEW
+------------------------------
+1. The official task specifies priority 105 on the preferred Active switch and
+   priority 100 on its Standby peer. This captured configuration uses 115 on
+   Weil_A1 for VLANs 2 and 4. Preserve 115 in this record as the observed value;
+   document it as a deviation from the task specification unless the final
+   device output confirms it was later changed.
+
+2. The Vlan6 and Vlan8 sections contain two additional commands each:
+
+     standby 2 track GigabitEthernet1/0/23
+     standby 2 track GigabitEthernet1/0/24
+
+   These commands refer to HSRP group 2 under the Vlan6 and Vlan8 interfaces,
+   although those interfaces use groups 6 and 8 in their corresponding VIP
+   statements. They appear inconsistent with the intended group-per-VLAN
+   design and may be accidental or leftover commands. They are retained here
+   because they appear in the captured running configuration. Verify with
+   `show standby vlan 6` and `show standby vlan 8` before correcting them.
+
+3. The tracking target is the two physical routed EtherChannel members. The
+   competition document specifies tracking the physical Port-channel interface.
+   The separate-member approach is a simulator compatibility workaround, not
+   an identical implementation of logical Port-channel tracking.
+
+================================================================================
+6. SPANNING TREE – RAPID PVST+
+================================================================================
+
+spanning-tree mode rapid-pvst
+spanning-tree vlan 2,4,6,8 priority 24576
+
+The recorded bridge priority is 24576 for VLANs 2, 4, 6 and 8. This is the
+configured priority value shown in the running config. Verify that Weil_A1 is
+actually the root bridge for each required VLAN using:
+
+  show spanning-tree vlan 2
+  show spanning-tree vlan 4
+  show spanning-tree vlan 6
+  show spanning-tree vlan 8
+
+The task asks Weil_A1 to be the primary root and Weil_A2 to be the secondary
+root. The running-config shows an explicit priority value rather than the
+`spanning-tree vlan ... root primary` macro command. Root status must be
+confirmed from operational STP output, not inferred from the config alone.
+
+================================================================================
+7. LAYER 2 ETHERCHANNEL – PORT-CHANNEL1
+================================================================================
+
+interface Port-channel1
+ switchport trunk native vlan 10
+ switchport trunk allowed vlan 2,4,6,8
+ switchport mode trunk
+!
+
+interface GigabitEthernet1/0/1
+ switchport trunk native vlan 10
+ switchport trunk allowed vlan 2,4,6,8
+ switchport mode trunk
+ channel-group 1 mode active
+!
+
+interface GigabitEthernet1/0/2
+ switchport trunk native vlan 10
+ switchport trunk allowed vlan 2,4,6,8
+ switchport mode trunk
+ channel-group 1 mode active
+!
+
+Recorded properties:
+- Logical interface: Port-channel1
+- EtherChannel type: Layer 2 trunk
+- Negotiation protocol: LACP (`mode active` on both shown members)
+- Native VLAN: 10
+- Allowed VLANs: 2, 4, 6 and 8
+- Physical members: GigabitEthernet1/0/1 and GigabitEthernet1/0/2
+
+This matches the task's stated native VLAN and allowed VLAN list. Confirm the
+remote Weil_A2 configuration and operational bundle with `show etherchannel
+summary` on both switches.
+
+================================================================================
+8. ROUTED L3 ETHERCHANNEL – PORT-CHANNEL2
+================================================================================
+
+interface Port-channel2
+ no switchport
+ ip address 10.11.1.2 255.255.255.252
+!
+
+interface GigabitEthernet1/0/23
+ no switchport
+ no ip address
+ channel-group 2 mode active
+ duplex auto
+ speed auto
+!
+
+interface GigabitEthernet1/0/24
+ no switchport
+ no ip address
+ channel-group 2 mode active
+ duplex auto
+ speed auto
+!
+
+Recorded properties:
+- Logical interface: Port-channel2
+- EtherChannel type: Layer 3 routed EtherChannel
+- Negotiation protocol: LACP (`mode active` on both shown members)
+- Local IPv4 address: 10.11.1.2/30
+- Expected Weil_C1 peer address from the task: 10.11.1.1/30
+- Physical members: GigabitEthernet1/0/23 and GigabitEthernet1/0/24
+
+HSRP tracks these two physical member interfaces individually because of the
+Packet Tracer limitation described in Section 5.
+
+Verify operational state and peer membership using:
+
+  show etherchannel summary
+  show interfaces port-channel2
+  show lacp neighbor
+  ping 10.11.1.1
+
+================================================================================
+9. ACCESS PORTS AND PORT SECURITY
+================================================================================
+
+The captured access-port configuration can be summarized as follows. Each
+listed access port is statically assigned to its VLAN, has Port Security
+activated, uses violation mode `protect`, and has PortFast and BPDU Guard.
+
+Ports Gi1/0/3 through Gi1/0/8 – VLAN 2 (HR)
+-----------------------------------------
+interface range GigabitEthernet1/0/3 - 8
+ switchport access vlan 2
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+
+Ports Gi1/0/9 through Gi1/0/16 – VLAN 4 (Sales)
+------------------------------------------------
+interface range GigabitEthernet1/0/9 - 16
+ switchport access vlan 4
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+
+Ports Gi1/0/17 through Gi1/0/20 – VLAN 6 (Engineering)
+-------------------------------------------------------
+interface range GigabitEthernet1/0/17 - 20
+ switchport access vlan 6
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+
+Port Gi1/0/21 – VLAN 8 (WLAN / AP port per task port plan)
+----------------------------------------------------------
+interface GigabitEthernet1/0/21
+ switchport access vlan 8
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 50
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+
+Port Gi1/0/22 – VLAN 8
+----------------------
+interface GigabitEthernet1/0/22
+ switchport access vlan 8
+ switchport mode access
+ switchport port-security
+ switchport port-security violation protect
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+
+Port Security policy reflected in the captured configuration:
+- Normal access ports: maximum 1 secure MAC address (default maximum), Protect.
+- Gi1/0/21: maximum 50 secure MAC addresses, Protect.
+- PortFast and BPDU Guard are configured on access ports, not on EtherChannel
+  trunk or routed uplink member interfaces.
+
+The task identifies the AP connection as interface Gi1/0/21 and requires a
+maximum of 50 MAC addresses on that port. This captured configuration matches
+that assignment and shows Protect mode on Gi1/0/21.
+
+Verify operational state with:
+
+  show port-security
+  show port-security interface GigabitEthernet1/0/21
+  show interfaces status
+
+NOTE: The range commands above are a documentation summary of the captured
+per-interface settings. They are not a replacement for the full per-interface
+running-config output if exact archival reproduction is required.
+
+================================================================================
+10. OSPF ROUTING
+================================================================================
+
+router ospf 1
+ router-id 1.1.1.1
+ log-adjacency-changes
+ network 10.11.1.1 0.0.0.0 area 0
+ network 10.10.11.2 0.0.0.0 area 0
+ network 10.11.1.2 0.0.0.0 area 0
+ network 10.10.2.29 0.0.0.0 area 0
+ network 10.10.4.13 0.0.0.0 area 0
+ network 10.10.6.61 0.0.0.0 area 0
+ network 10.10.8.5 0.0.0.0 area 0
+!
+
+Captured OSPF properties:
+- Process ID: 1
+- Router ID: 1.1.1.1
+- Intended area for local Weilburg interfaces: Area 0
+- OSPF network statements are entered with wildcard 0.0.0.0.
+
+OSPF ITEMS TO REVIEW
+--------------------
+1. The statement `network 10.11.1.1 0.0.0.0 area 0` refers to the expected
+   Weil_C1 peer address, not the local Port-channel2 address configured on
+   Weil_A1 (10.11.1.2). An OSPF `network` statement selects local interfaces;
+   this peer-address statement does not match Weil_A1's local interface and is
+   likely unnecessary or erroneous. Verify against `show ip interface brief`
+   and `show ip ospf interface brief`.
+
+2. The Loopback1 statement currently matches 10.10.11.2. The official task
+   specifies 10.10.111.2. Resolve the addressing discrepancy before claiming
+   task compliance.
+
+3. The captured OSPF process does not contain `passive-interface` commands for
+   VLANs 2, 4, 6 and 8. The task explicitly says OSPF updates must not be sent
+   to those access VLANs. Verify whether this requirement was configured by
+   another mechanism or whether passive-interface commands still need to be
+   added. Confirm with `show ip protocols` and `show ip ospf interface brief`.
+
+4. The original terminal transcript displayed the OSPF section twice around a
+   pager artefact. This normalized record includes the section once. Confirm
+   the actual process with `show running-config | section router ospf`.
+
+================================================================================
+11. MANAGEMENT ACCESS CONTROL
+================================================================================
+
+access-list 1 permit 10.10.130.0 0.0.0.7
+
+line con 0
+ login local
+!
+line aux 0
+!
+line vty 0 4
+ access-class 1 in
+ login local
+ transport input ssh
+!
+line vty 5 15
+ access-class 1 in
+ login local
+ transport input ssh
+!
+
+Management policy reflected in the captured configuration:
+- Local username authentication is used on the console and VTY lines.
+- SSH version 2 is configured.
+- VTY lines 0–15 accept SSH only; Telnet is not permitted.
+- Standard ACL 1 permits the Server VLAN subnet 10.10.130.0/29 as a source.
+- The MOTD banner warns against unauthorized access.
+
+Verify remote management from an authorized Server VLAN host and from a host
+outside that subnet. Also verify the RSA key exists and SSH is operational.
+
+================================================================================
+12. COMPETITION REQUIREMENT / OBSERVED CONFIGURATION REVIEW
+================================================================================
+
+Requirement                         Captured Weil_A1 configuration / status
+----------------------------------  -----------------------------------------
+Hostname                            Weil_A1 – present
+Management Loopback1                10.10.11.2/32 captured; task specifies
+                                    10.10.111.2/32 – discrepancy
+Local user / enable secret          Present in source; hashes redacted here
+SSH version 2                       Present
+SSH-only VTY lines 0–15             Present
+Domain name                         skill39.org – present
+MOTD banner                         Present; wording matches task
+VLANs 2, 4, 6, 8                    SVI configuration present; VLAN database
+                                    not shown in this transcript
+Native VLAN 10                      Present on Port-channel1 and members
+Allowed VLANs 2,4,6,8               Present on Port-channel1 and members
+L2 EtherChannel LACP                Mode active on Gi1/0/1 and Gi1/0/2
+L3 EtherChannel LACP                Mode active on Gi1/0/23 and Gi1/0/24
+Rapid PVST+                         Present
+Weil_A1 STP root                    Priority 24576 set; verify operational root
+HSRP version 1                      No explicit version command; default v1
+HSRP groups 2,4,6,8                 Present
+HSRP priorities                     115 on VLAN 2/4; task specifies 105
+HSRP tracking                       Two physical members tracked separately as
+                                    Packet Tracer workaround
+DHCP relay                           10.10.130.2 on user SVIs
+Port Security                       Present on Gi1/0/3–22; Gi1/0/21 max 50,
+                                    Protect; matches recorded port requirement
+OSPF process / Router ID            Process 1 / 1.1.1.1 present
+OSPF client VLAN passive             Not present in captured OSPF block; verify
+
+This table compares the captured configuration transcript with the task
+specification. It is not a declaration that every item has passed a functional
+test.
+
+================================================================================
+13. VERIFICATION COMMAND CHECKLIST
+================================================================================
+
+Run these commands on Weil_A1 and save the outputs as project evidence.
+
+General configuration and interfaces
+-------------------------------------
+show version
+show running-config
+show ip interface brief
+show interfaces status
+show vlan brief
+
+EtherChannel
+------------
+show etherchannel summary
+show interfaces port-channel1
+show interfaces port-channel2
+show lacp neighbor
+
+Spanning Tree
+-------------
+show spanning-tree summary
+show spanning-tree vlan 2
+show spanning-tree vlan 4
+show spanning-tree vlan 6
+show spanning-tree vlan 8
+
+HSRP and tracking
+-----------------
+show standby brief
+show standby vlan 2
+show standby vlan 4
+show standby vlan 6
+show standby vlan 8
+
+OSPF and routing
+----------------
+show ip protocols
+show ip ospf neighbor
+show ip ospf interface brief
+show ip route
+
+Port Security
+-------------
+show port-security
+show port-security interface GigabitEthernet1/0/21
+show port-security address
+
+Management security
+-------------------
+show ip ssh
+show crypto key mypubkey rsa
+show access-lists 1
+show running-config | section line vty
+
+Connectivity
+------------
+ping 10.11.1.1
+ping <Weil_A2-routed-or-management-address>
+ping 10.10.130.2
+
+================================================================================
+14. PUBLICATION AND SECURITY NOTES
+================================================================================
+
+- Password hashes are intentionally redacted. Do not publish the original
+  enable secret or local user secret, even though they are stored as type 5
+  hashes in the captured output.
+- Do not publish RSA private keys, VPN keys, SNMP communities, tokens or any
+  other private credentials if they are exported separately.
+- This record is based on a user-provided terminal transcript. It is not a
+  cryptographically verified export from the Packet Tracer project file.
+- The duplicate pager output was normalized. The source transcript should be
+  retained privately if exact provenance is required.
+- Do not paste the entire document into a device. It contains explanatory text,
+  review notes and commands that require verification.
+- Before creating a separate `Weil_A1.running-config.txt`, capture a fresh
+  `show running-config` from the working Packet Tracer device, remove secrets,
+  and preserve the command output without commentary.
+
+================================================================================
+END OF WEIL_A1 CONFIGURATION RECORD
+================================================================================

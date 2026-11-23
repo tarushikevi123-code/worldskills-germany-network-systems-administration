@@ -27,9 +27,8 @@ The recovery topology consists of six routers:
 
 The network has four serial `/30` routed links, a shared Ethernet transit segment (`10.10.1.16/29`), five LAN prefixes shown in the task diagram, and a simulated external server (`203.0.113.100`).
 
-See <img width="1311" height="816" alt="image" src="https://github.com/user-attachments/assets/f1bd4804-358c-4fe7-93e5-2bd93e9e6b28" />
-) for the reconstructed logical diagram, verified serial endpoint mapping, router IDs and addressing notes.
-
+ <img width="1311" height="816" alt="image" src="https://github.com/user-attachments/assets/f1bd4804-358c-4fe7-93e5-2bd93e9e6b28" />
+ 
 ## 3. Topology overview
 
 ```mermaid

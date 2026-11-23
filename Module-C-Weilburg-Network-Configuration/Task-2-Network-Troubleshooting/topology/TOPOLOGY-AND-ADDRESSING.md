@@ -6,26 +6,8 @@ The official task topology image is not copied into this repository. The Mermaid
 
 ## 1. Logical topology
 
-```mermaid
-flowchart LR
-    EXT[External server<br/>203.0.113.100] --- CLOUD((Simulated Internet))
-    CLOUD --- WAN[R-Weil-WAN<br/>RID 9.9.9.9]
+![Uploading image.png…]()
 
-    WAN -- "10.10.0.236/30" --- W2[R-Weil-2<br/>RID 4.4.4.4]
-    W2 -- "10.10.0.240/30" --- SR[R-Server<br/>RID 6.6.6.6]
-    SR -- "10.10.0.244/30" --- W1[R-Weil-1<br/>RID 5.5.5.5]
-    W2 -- "10.10.0.248/30" --- W1
-
-    WAN -- "10.10.1.16/29" --- SW[Shared Ethernet switch]
-    SW --- BER[R-Berlin<br/>RID 8.8.8.8]
-    SW --- HAN[R-Hannover-1<br/>RID 7.7.7.7]
-
-    BER -- "192.168.11.0/24" --- BLAN[Berlin LAN<br/>PC-Berlin / Server-Berlin]
-    HAN -- "192.168.22.0/25" --- HLAN[Hannover LAN<br/>PC-Hannover / Server-Hannover]
-    SR -- "192.168.33.0/28 per diagram" --- SLAN[Server LAN<br/>Server1]
-    W1 -- "192.168.44.0/26" --- W44[Weilburg LAN<br/>PC-Weil-1 / PC-Weil-2]
-    W1 -- "192.168.55.0/27" --- W55[Weilburg-1 LAN<br/>LAP-Weil / PC-Weil-3]
-```
 
 ## 2. LAN prefixes from the task diagram
 

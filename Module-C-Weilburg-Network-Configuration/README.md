@@ -35,6 +35,19 @@ The implementation covers:
 - Port Security on access-switch interfaces.
 - Extended ACL policy for HTTPS/HTTP access to the Intranet server.
 
+
+## Task 2 – Network Troubleshooting
+
+The same Module C task document includes a second, separate troubleshooting task: recover the prebuilt multi-router network after a simulated attack and restore IPv4 ICMP reachability between PCs, servers and the external server.
+
+This recovery exercise was completed in Cisco Packet Tracer and is documented separately to keep the configuration task and troubleshooting task clearly structured.
+
+- [Task 2 – Troubleshooting overview and topology](Task-2-Network-Troubleshooting/README.md)
+- [Detailed troubleshooting log](Task-2-Network-Troubleshooting/documentation/TROUBLESHOOTING-LOG.md)
+- [Topology and addressing reference](Task-2-Network-Troubleshooting/topology/TOPOLOGY-AND-ADDRESSING.md)
+- [Connectivity verification results](Task-2-Network-Troubleshooting/documentation/CONNECTIVITY-VERIFICATION.md)
+
+
 ## Network Architecture
 
 ### Device roles

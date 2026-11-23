@@ -24,6 +24,8 @@ The recovery topology consists of six routers:
 - `R-Server` – server-LAN router.
 - `R-Berlin` – Berlin LAN router.
 - `R-Hannover-1` – Hannover LAN router.
+- <img width="1335" height="747" alt="image" src="https://github.com/user-attachments/assets/31fcfa0f-00a3-4f73-9ad6-4d6d648dcb14" />
+
 
 The network has four serial `/30` routed links, a shared Ethernet transit segment (`10.10.1.16/29`), five LAN prefixes shown in the task diagram, and a simulated external server (`203.0.113.100`).
 

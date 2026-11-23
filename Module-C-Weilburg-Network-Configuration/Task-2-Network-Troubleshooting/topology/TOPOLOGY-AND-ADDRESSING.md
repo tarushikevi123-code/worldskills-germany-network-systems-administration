@@ -4,9 +4,10 @@ This page records the logical layout shown in **WorldSkills Germany 2025 – Mod
 
 The official task topology image is not copied into this repository. The Mermaid diagram below is an independent reconstruction for documentation purposes.
 
-## 1. Logical topology
+## 1.Topology
 
-![Uploading image.png…]()
+<img width="1325" height="748" alt="image" src="https://github.com/user-attachments/assets/65c16368-fd15-405c-b3b8-96849af6cf8f" />
+
 
 
 ## 2. LAN prefixes from the task diagram
